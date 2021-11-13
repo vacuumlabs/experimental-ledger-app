@@ -16,10 +16,18 @@ async function example() {
 
   console.log("\n".repeat(3));
   console.log("Input: initHash");
-  wait()
+  // wait()
   console.log("Response:");
   console.log(await appFio.initHash());
   wait()
+  console.log("\n".repeat(3));
+
+  console.log("\n".repeat(3));
+  console.log("Input: endHash");
+  // wait()
+  console.log("Response:");
+  console.log(await appFio.endHash());
+  // wait()
   console.log("\n".repeat(3));
 
 //   console.log("Input: getSerial");

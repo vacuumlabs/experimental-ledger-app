@@ -25,6 +25,7 @@ import {getCompatibility, getVersion} from "./interactions/getVersion"
 import {runTests} from "./interactions/runTests"
 import {signTransaction} from "./interactions/signTransaction"
 import {initHash} from "./interactions/initHash"
+import {endHash} from "./interactions/endHash"
 import type {
     HexString,
     ParsedAction,
@@ -35,7 +36,7 @@ import type {
 } from './types/internal'
 import type {
     Action, ActionAuthorisation, BIP32Path, DeviceCompatibility, PublicKey,
-    Serial, Init, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
+    Serial, Init, End, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
 } from './types/public'
 import utils from "./utils"
 import {assert} from './utils/assert'
@@ -145,7 +146,8 @@ export class Fio {
             "getSerial",
             "getPublicKey",
             "signTransaction",
-            "initHash"
+            "initHash",
+            "endHash"
         ]
         this.transport.decorateAppAPIMethods(this, methods, scrambleKey)
         this._send = async (params: SendParams): Promise<Buffer> => {
@@ -215,6 +217,14 @@ export class Fio {
 
     * _initHash(): Interaction<InitHashResponse> {
         return yield* initHash()
+    }
+
+    async endHash(): Promise<EndHashResponse> {
+        return interact(this._endHash(), this._send)
+    }
+
+    * _endHash(): Interaction<EndHashResponse> {
+        return yield* endHash()
     }
 
     /**
@@ -304,6 +314,8 @@ export type GetVersionResponse = {
 export type GetSerialResponse = Serial
 
 export type InitHashResponse = Init
+
+export type EndHashResponse = End
 
 /**
  * Get public key ([[Fio.getPublicKey]]) request data

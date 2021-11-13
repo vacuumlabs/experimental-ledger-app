@@ -63,7 +63,7 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 		sha_256_init(&ctx->hashContext);
 		sha_256_append(&ctx->hashContext, wireData->chainId, SIZEOF(wireData->chainId));
 
-		uint8_t ins_code[1];
+		uint8_t ins_code[1]; // TODO also add p1 to hash
 		ins_code[0] = 0x30;
 
 		sha_256_init(&ctx->integrityHashContext);
@@ -75,6 +75,63 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 
 	signTx_handleInit_ui_runStep();
 }
+
+// =============================== END ==================================
+
+static void signTx_handleEnd_ui_runStep()
+{
+	TRACE("UI step handleEnd");
+	io_send_buf(SUCCESS, G_io_apdu_buffer, 32);
+	ui_displayBusy(); // needs to happen after I/O
+}
+
+__noinline_due_to_stack__
+void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
+	{
+		// sanity checks
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+
+	{
+		// VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
+
+
+		uint8_t ins_code[2];
+		ins_code[0] = 0x30;
+		ins_code[1] = 0x06;
+
+		sha_256_append(&ctx->integrityHashContext, ins_code, 2); // TODO change this buffer, it is ugly
+
+		//We finish the tx hash appending a 32-byte empty buffer
+		uint8_t hashBuf[32];
+		explicit_bzero(hashBuf, SIZEOF(hashBuf));
+		sha_256_append(&ctx->hashContext, hashBuf, SIZEOF(hashBuf));
+
+		//we get the resulting tx hash
+		sha_256_finalize(&ctx->hashContext, hashBuf, SIZEOF(hashBuf));
+		TRACE("SHA_256_finalize, resulting hash:");
+		TRACE_BUFFER(hashBuf, 32);
+
+		// We finish the integrity hash appending a 32-byte empty buffer
+		uint8_t integrityHashBuf[32];
+		explicit_bzero(integrityHashBuf, SIZEOF(integrityHashBuf));
+		sha_256_append(&ctx->integrityHashContext, integrityHashBuf, SIZEOF(integrityHashBuf));
+
+		// We save the tx hash into APDU buffer to return it
+		memcpy(G_io_apdu_buffer, hashBuf, SIZEOF(hashBuf));
+
+		// We get the resulting integrity hash and check whether it is in the list of allowed hashes (TODO)
+		sha_256_finalize(&ctx->integrityHashContext, integrityHashBuf, SIZEOF(integrityHashBuf));
+
+		// TODO: check if integrityHash is in allowed hashes (integrity hash is in integrityHashBuf)
+	}
+
+	signTx_handleEnd_ui_runStep();
+}
+
 
 
 // // ============================== WITNESS ==============================
@@ -255,6 +312,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		// CASE(0x04, signTx_handleActionAuthorizationAPDU);
 		// CASE(0x05, signTx_handleActionDataAPDU);
 		// CASE(0x10, signTx_handleWitnessAPDU);
+		CASE(0x06, signTx_handleEndAPDU);
 		DEFAULT(NULL)
 #	undef   CASE
 #	undef   DEFAULT

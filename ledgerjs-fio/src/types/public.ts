@@ -77,6 +77,10 @@ export type Init = {
     ret: string
 };
 
+export type End = {
+    ret: string
+}
+
 /**
  * Represents BIP 32 path.
  *

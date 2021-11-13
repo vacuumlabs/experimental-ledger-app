@@ -27,7 +27,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		// 0x2* -  transaction related
 		// CASE(0x20, signTransaction_handleAPDU);
 
-		// 0x3* - init Hash
+		// 0x3* - init/end Hash
 		CASE(0x30, signTransaction_handleAPDU); // TODO change this to signTransaction_initHash_handleAPDU or something when possible
 
 		#ifdef DEVEL

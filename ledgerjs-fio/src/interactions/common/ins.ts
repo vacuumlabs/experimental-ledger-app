@@ -10,5 +10,5 @@ export const enum INS {
 
 
     
-    INIT_HASH = 0x30
+    HASH = 0x30,
 }
