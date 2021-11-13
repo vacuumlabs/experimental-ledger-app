@@ -7,4 +7,8 @@ export const enum INS {
     SIGN_TX = 0x20,
 
     RUN_TESTS = 0xf0,
+
+
+    
+    INIT_HASH = 0x30
 }

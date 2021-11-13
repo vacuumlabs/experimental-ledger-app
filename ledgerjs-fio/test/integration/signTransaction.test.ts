@@ -193,6 +193,10 @@ describe("signTransaction", async () => {
         expect(signatureLedger.verify(fullMsg, otherPublicKey)).to.be.false
     })
 
+    it("Init hash", async () => {
+        
+    })
+
     it("Sign mainnet transaction", async () => {
         const network = "MAINNET"
         const tx = basicTx

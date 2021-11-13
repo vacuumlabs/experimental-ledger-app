@@ -73,6 +73,10 @@ export type Serial = {
     serial: string
 };
 
+export type Init = {
+    ret: string
+};
+
 /**
  * Represents BIP 32 path.
  *

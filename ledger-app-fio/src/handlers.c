@@ -25,7 +25,10 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		CASE(0x10, getPublicKey_handleAPDU);
 
 		// 0x2* -  transaction related
-		CASE(0x20, signTransaction_handleAPDU);
+		// CASE(0x20, signTransaction_handleAPDU);
+
+		// 0x3* - init Hash
+		CASE(0x30, signTransaction_handleAPDU); // TODO change this to signTransaction_initHash_handleAPDU or something when possible
 
 		#ifdef DEVEL
 		// 0xF* -  debug_mode related

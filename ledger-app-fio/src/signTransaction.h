@@ -10,11 +10,12 @@ handler_fn_t signTransaction_handleAPDU;
 
 typedef struct {
 	sha_256_context_t hashContext;
-	int ui_step;
-	int stage;
+	sha_256_context_t integrityHashContext;
 
 	network_type_t network;
 	char actionValidationActor[NAME_STRING_MAX_LENGTH];
+
+	int ui_step;
 
 	//The following data is not needed at once.
 	//to be used in HEADER step
