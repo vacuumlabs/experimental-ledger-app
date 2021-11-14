@@ -8,7 +8,7 @@ const send = (params: {
     p2: number,
     data: Buffer,
     expectedResponseLength?: number
-}): SendParams => ({ins: INS.HASH, ...params})
+}): SendParams => ({ins: INS.SIGN_TX, ...params})
 
 
 export function* endHash(): Interaction<End> {

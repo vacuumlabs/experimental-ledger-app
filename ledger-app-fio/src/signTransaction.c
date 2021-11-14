@@ -63,8 +63,9 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 		sha_256_init(&ctx->hashContext);
 		sha_256_append(&ctx->hashContext, wireData->chainId, SIZEOF(wireData->chainId));
 
-		uint8_t ins_code[1]; // TODO also add p1 to hash
-		ins_code[0] = 0x30;
+		uint8_t ins_code[2] = {0x30, 0x01}; // TODO also add p1 to hash
+		// ins_code[0] = 0x30;
+		// ins_code[1] = 0x01;
 
 		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, ins_code, 1); // TODO change this buffer, it is ugly
@@ -99,9 +100,9 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 		// VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
 
 
-		uint8_t ins_code[2];
-		ins_code[0] = 0x30;
-		ins_code[1] = 0x06;
+		uint8_t ins_code[2] = {0x30, 0x06};
+		// ins_code[0] = 0x30;
+		// ins_code[1] = 0x06;
 
 		sha_256_append(&ctx->integrityHashContext, ins_code, 2); // TODO change this buffer, it is ugly
 
@@ -112,13 +113,15 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 
 		//we get the resulting tx hash
 		sha_256_finalize(&ctx->hashContext, hashBuf, SIZEOF(hashBuf));
-		TRACE("SHA_256_finalize, resulting hash:");
+		TRACE("SHA_256_finalize, resulting tx hash:");
 		TRACE_BUFFER(hashBuf, 32);
 
 		// We finish the integrity hash appending a 32-byte empty buffer
-		uint8_t integrityHashBuf[32];
+		uint8_t integrityHashBuf[32]; // TODO only use 1 buffer for both tx and integrity hash
 		explicit_bzero(integrityHashBuf, SIZEOF(integrityHashBuf));
 		sha_256_append(&ctx->integrityHashContext, integrityHashBuf, SIZEOF(integrityHashBuf));
+		// TRACE("SHA_256_finalize, resulting integrity hash:");
+		// TRACE_BUFFER(integrityHashBuf, 32);
 
 		// We save the tx hash into APDU buffer to return it
 		memcpy(G_io_apdu_buffer, hashBuf, SIZEOF(hashBuf));
@@ -132,170 +135,38 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 	signTx_handleEnd_ui_runStep();
 }
 
+// ========================== SEND DATA NO DISPLAY =============================
 
+static void signTx_handleSendDataNoDisplay_ui_runStep()
+{
+	TRACE("UI step handleSendDataNoDisplay");
+	// respondSuccessEmptyMsg();
+	io_send_buf(SUCCESS, NULL, 0);
+}
 
-// // ============================== WITNESS ==============================
+__noinline_due_to_stack__
+void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
+	{
+		// sanity checks
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
 
-// enum {
-// 	HANDLE_WITNESS_STEP_DISPLAY_DETAILS = 1000,
-// 	HANDLE_WITNESS_STEP_CONFIRM,
-// 	HANDLE_WITNESS_STEP_RESPOND,
-// 	HANDLE_WITNESS_STEP_INVALID,
-// } ;
+	{
+		// Add to integrity hash
+		uint8_t ins_code[2] = {0x30, 0x07};
+		// ins_code[0] = 0x30;
+		// ins_code[1] = 0x07;
+		sha_256_append(&ctx->integrityHashContext, ins_code, 2); // TODO change this buffer, it is ugly
 
-// static void signTx_handleWitness_ui_runStep()
-// {
-// 	TRACE("UI step %d", ctx->ui_step);
-// 	TRACE_STACK_USAGE();
-// 	ui_callback_fn_t* this_fn = signTx_handleWitness_ui_runStep;
+		// Add to tx hash
+		sha_256_append(&ctx->hashContext, wireDataBuffer, wireDataSize);
+	}
 
-// 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-
-// 	UI_STEP(HANDLE_WITNESS_STEP_DISPLAY_DETAILS) {
-// 		ui_displayPubkeyScreen("Sign with", &ctx->wittnessPathPubkey, this_fn);
-// 	}
-
-// 	UI_STEP(HANDLE_WITNESS_STEP_CONFIRM) {
-// 		ui_displayPrompt(
-// 		        "Sign",
-// 		        "transaction?",
-// 		        this_fn,
-// 		        respond_with_user_reject
-// 		);
-// 	}
-
-// 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
-// 		io_send_buf(SUCCESS, G_io_apdu_buffer, 65 + 32);
-// 		ui_displayBusy(); // needs to happen after I/O
-// 		advanceStage();
-// 	}
-
-// 	UI_STEP_END(HANDLE_WITNESS_STEP_INVALID);
-// }
-
-// __noinline_due_to_stack__
-// void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
-// {
-// 	TRACE_STACK_USAGE();
-// 	{
-// 		// sanity checks
-// 		CHECK_STAGE(SIGN_STAGE_WITNESS);
-// 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-// 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-// 	}
-
-// 	explicit_bzero(&ctx->wittnessPath, SIZEOF(ctx->wittnessPath));
-
-// 	{
-// 		// parse
-// 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-// 		size_t parsedSize = bip44_parseFromWire(&ctx->wittnessPath, wireDataBuffer, wireDataSize);
-// 		VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
-// 	}
-
-// 	security_policy_t policy = POLICY_DENY;
-// 	{
-// 		// get policy
-// 		policy = policyForSignTxWitness(&ctx->wittnessPath);
-// 		TRACE("Policy: %d", (int) policy);
-// 		ENSURE_NOT_DENIED(policy);
-// 	}
-
-// 	//Extension points
-// 	uint8_t buf[1];
-// 	explicit_bzero(buf, SIZEOF(buf));
-// 	sha_256_append(&ctx->hashContext, buf, SIZEOF(buf));
-
-// 	//We finish the hash appending a 32-byte empty buffer
-// 	uint8_t hashBuf[32];
-// 	explicit_bzero(hashBuf, SIZEOF(hashBuf));
-// 	sha_256_append(&ctx->hashContext, hashBuf, SIZEOF(hashBuf));
-
-// 	//we get the resulting hash
-// 	sha_256_finalize(&ctx->hashContext, hashBuf, SIZEOF(hashBuf));
-// 	TRACE("SHA_256_finalize, resulting hash:");
-// 	TRACE_BUFFER(hashBuf, 32);
-
-// 	//We derive the private key
-// 	private_key_t privateKey;
-// 	derivePrivateKey(&ctx->wittnessPath, &privateKey);
-// 	TRACE("privateKey.d:");
-// 	TRACE_BUFFER(privateKey.d, privateKey.d_len);
-
-// 	//We want to show pubkey, thus we derive it
-// 	derivePublicKey(&ctx->wittnessPath, &ctx->wittnessPathPubkey);
-// 	TRACE_BUFFER(ctx->wittnessPathPubkey.W, SIZEOF(ctx->wittnessPathPubkey.W));
-
-// 	//We sign the hash
-// 	//Code producing signatures is taken from EOS app
-// 	uint32_t tx = 0;
-// 	uint8_t V[33];
-// 	uint8_t K[32];
-// 	int tries = 0;
-
-// 	// Loop until a candidate matching the canonical signature is found
-// 	// Taken from EOS app
-// 	// We use G_io_apdu_buffer to save memory (and also to minimize changes to EOS code)
-// 	// The code produces the signature right where we need it for the respons
-// 	BEGIN_TRY {
-// 		TRY {
-// 			explicit_bzero(G_io_apdu_buffer, SIZEOF(G_io_apdu_buffer));
-// 			for (;;)
-// 			{
-// 				if (tries == 0) {
-// 					rng_rfc6979(G_io_apdu_buffer + 100, hashBuf, privateKey.d, privateKey.d_len, SECP256K1_N, 32, V, K);
-// 				} else {
-// 					rng_rfc6979(G_io_apdu_buffer + 100, hashBuf, NULL, 0, SECP256K1_N, 32, V, K);
-// 				}
-// 				uint32_t infos;
-// 				tx = cx_ecdsa_sign(&privateKey, CX_NO_CANONICAL | CX_RND_PROVIDED | CX_LAST, CX_SHA256,
-// 				                   hashBuf, 32,
-// 				                   G_io_apdu_buffer + 100, 100,
-// 				                   &infos);
-// 				TRACE_BUFFER(G_io_apdu_buffer + 100, 100);
-
-// 				if ((infos & CX_ECCINFO_PARITY_ODD) != 0) {
-// 					G_io_apdu_buffer[100] |= 0x01;
-// 				}
-// 				G_io_apdu_buffer[0] = 27 + 4 + (G_io_apdu_buffer[100] & 0x01);
-// 				ecdsa_der_to_sig(G_io_apdu_buffer + 100, G_io_apdu_buffer + 1);
-// 				TRACE_BUFFER(G_io_apdu_buffer, 65);
-
-// 				if (check_canonical(G_io_apdu_buffer + 1)) {
-// 					tx = 1 + 64;
-// 					break;
-// 				} else {
-// 					TRACE("Try %d unsuccesfull! We will not get correct signature!!!!!!!!!!!!!!!!!!!!!!!!!", tries);
-// 					tries++;
-// 				}
-// 			}
-// 		}
-// 		FINALLY {
-// 			memset(&privateKey, 0, sizeof(privateKey));
-// 		}
-// 	}
-// 	END_TRY;
-
-// 	//We add hash to the response
-// 	TRACE("ecdsa_der_to_sig_result:");
-// 	TRACE_BUFFER(G_io_apdu_buffer, 65);
-// 	memcpy(G_io_apdu_buffer + 65, hashBuf, 32);
-
-// 	{
-// 		// select UI steps
-// 		switch (policy) {
-// #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-// 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_WITNESS_STEP_DISPLAY_DETAILS);
-// #	undef   CASE
-// 		default:
-// 			THROW(ERR_NOT_IMPLEMENTED);
-// 		}
-// 	}
-
-// 	signTx_handleWitness_ui_runStep();
-// }
-
+	signTx_handleSendDataNoDisplay_ui_runStep();
+}
 
 // ============================== MAIN HANDLER ==============================
 
@@ -313,6 +184,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		// CASE(0x05, signTx_handleActionDataAPDU);
 		// CASE(0x10, signTx_handleWitnessAPDU);
 		CASE(0x06, signTx_handleEndAPDU);
+		CASE(0x07, signTx_handleSendDataNoDisplayAPDU);
 		DEFAULT(NULL)
 #	undef   CASE
 #	undef   DEFAULT

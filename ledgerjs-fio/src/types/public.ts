@@ -81,6 +81,10 @@ export type End = {
     ret: string
 }
 
+export type SendDataNoDisplay = {
+    ret: string
+}
+
 /**
  * Represents BIP 32 path.
  *

@@ -1,4 +1,4 @@
-import type {Init} from "../types/public"
+import type {SendDataNoDisplay} from "../types/public"
 import utils from "../utils"
 import {INS} from "./common/ins"
 import type {Interaction, SendParams} from "./common/types"
@@ -11,13 +11,13 @@ const send = (params: {
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
 
 
-export function* initHash(): Interaction<Init> {
+export function* sendDataNoDisplay(): Interaction<SendDataNoDisplay> {
     const P1_UNUSED = 0x00
     const P2_UNUSED = 0x00
     const response = yield send({
-        p1: 0x01,
+        p1: 0x07,
         p2: P2_UNUSED,
-        data: Buffer.alloc(32),
+        data: Buffer.from("abcd"),
         expectedResponseLength: 0,  // Expect 0 bytes in response
     })
 
