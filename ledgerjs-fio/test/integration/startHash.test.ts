@@ -1,0 +1,21 @@
+import {expect} from "chai"
+
+import type Fio from "../../src/fio"
+import {getFio} from "../test_utils"
+
+describe("initHash", async () => {
+    let fio: Fio = {} as Fio
+
+    beforeEach(async () => {
+        fio = await getFio()
+    })
+
+    afterEach(async () => {
+        await (fio as any).t.close()
+    })
+
+    it("Should correctly start the tx hash and integrity hash", async () => {
+        const response = await fio.initHash()
+        expect(response.ret.length).to.equal(0)
+    })
+})

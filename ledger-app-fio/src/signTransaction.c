@@ -64,11 +64,9 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 		sha_256_append(&ctx->hashContext, wireData->chainId, SIZEOF(wireData->chainId));
 
 		uint8_t ins_code[2] = {0x30, 0x01}; // TODO also add p1 to hash
-		// ins_code[0] = 0x30;
-		// ins_code[1] = 0x01;
 
 		sha_256_init(&ctx->integrityHashContext);
-		sha_256_append(&ctx->integrityHashContext, ins_code, 1); // TODO change this buffer, it is ugly
+		sha_256_append(&ctx->integrityHashContext, ins_code, 1);
 
 		ctx->network = getNetworkByChainId(wireData->chainId, SIZEOF(wireData->chainId));
 		TRACE("Network %d:", ctx->network);
@@ -99,12 +97,9 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 	{
 		// VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
 
-
 		uint8_t ins_code[2] = {0x30, 0x06};
-		// ins_code[0] = 0x30;
-		// ins_code[1] = 0x06;
 
-		sha_256_append(&ctx->integrityHashContext, ins_code, 2); // TODO change this buffer, it is ugly
+		sha_256_append(&ctx->integrityHashContext, ins_code, 2);
 
 		//We finish the tx hash appending a 32-byte empty buffer
 		uint8_t hashBuf[32];
@@ -140,8 +135,8 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 static void signTx_handleSendDataNoDisplay_ui_runStep()
 {
 	TRACE("UI step handleSendDataNoDisplay");
-	// respondSuccessEmptyMsg();
-	io_send_buf(SUCCESS, NULL, 0);
+	respondSuccessEmptyMsg();
+	// io_send_buf(SUCCESS, NULL, 0);
 }
 
 __noinline_due_to_stack__
@@ -157,9 +152,7 @@ void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	{
 		// Add to integrity hash
 		uint8_t ins_code[2] = {0x30, 0x07};
-		// ins_code[0] = 0x30;
-		// ins_code[1] = 0x07;
-		sha_256_append(&ctx->integrityHashContext, ins_code, 2); // TODO change this buffer, it is ugly
+		sha_256_append(&ctx->integrityHashContext, ins_code, 2);
 
 		// Add to tx hash
 		sha_256_append(&ctx->hashContext, wireDataBuffer, wireDataSize);
