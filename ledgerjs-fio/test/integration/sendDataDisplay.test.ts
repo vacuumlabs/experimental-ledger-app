@@ -3,7 +3,7 @@ import {expect} from "chai"
 import type Fio from "../../src/fio"
 import {getFio} from "../test_utils"
 
-describe("endHash", async () => {
+describe("sendDataDisplay", async () => {
     let fio: Fio = {} as Fio
 
     beforeEach(async () => {
@@ -14,10 +14,9 @@ describe("endHash", async () => {
         await (fio as any).t.close()
     })
 
-    it("Should correctly end the tx hash and integrity hash and return tx hash", async () => {
+    it("Should send header and body and them on ledger", async () => {
         const init_response = await fio.initHash()
-        const sdd_response = await fio.sendDataDisplay("Amount", "76")
-        const response = await fio.endHash()
-        expect(response.ret.length).to.equal(2 * 32)
+        const response = await fio.sendDataDisplay("Amount", "52")
+        expect(response.ret.length).to.equal(0)
     })
 })

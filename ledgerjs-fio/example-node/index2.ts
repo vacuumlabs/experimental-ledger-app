@@ -27,13 +27,13 @@ async function example() {
   // wait()
   console.log("\n".repeat(3));
 
-  console.log("\n".repeat(3));
-  console.log("Input: sendDataNoDisplay");
-  // wait()
-  console.log("Response:");
-  console.log(await appFio.sendDataNoDisplay());
-  // wait()
-  console.log("\n".repeat(3));
+  // console.log("\n".repeat(3));
+  // console.log("Input: sendDataNoDisplay");
+  // // wait()
+  // console.log("Response:");
+  // console.log(await appFio.sendDataNoDisplay());
+  // // wait()
+  // console.log("\n".repeat(3));
 
   console.log("\n".repeat(3));
   console.log("Input: sendDataDisplay");
