@@ -27,6 +27,7 @@ import {signTransaction} from "./interactions/signTransaction"
 import {initHash} from "./interactions/initHash"
 import {endHash} from "./interactions/endHash"
 import {sendDataNoDisplay} from "./interactions/sendDataNoDisplay"
+import {sendDataDisplay} from "./interactions/sendDataDisplay"
 import type {
     HexString,
     ParsedAction,
@@ -37,7 +38,7 @@ import type {
 } from './types/internal'
 import type {
     Action, ActionAuthorisation, BIP32Path, DeviceCompatibility, PublicKey,
-    Serial, Init, End, SendDataNoDisplay, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
+    Serial, Init, End, SendDataNoDisplay, SendDataDisplay, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
 } from './types/public'
 import utils from "./utils"
 import {assert} from './utils/assert'
@@ -237,6 +238,14 @@ export class Fio {
         return yield* sendDataNoDisplay()
     }
 
+    async sendDataDisplay(headerText: String, bodyText: String): Promise<SendDataDisplayResponse> {
+        return interact(this._sendDataDisplay(headerText, bodyText), this._send);
+    }
+
+    *_sendDataDisplay(headerText: String, bodyText: String): Interaction<SendDataDisplayResponse> {
+        return yield* sendDataDisplay(headerText, bodyText);
+    }
+
     /**
      * Get public key for the specified BIP 32 path.
      *
@@ -328,6 +337,8 @@ export type InitHashResponse = Init
 export type EndHashResponse = End
 
 export type SendDataNoDisplayResponse = SendDataNoDisplay
+
+export type SendDataDisplayResponse = SendDataDisplay
 
 /**
  * Get public key ([[Fio.getPublicKey]]) request data

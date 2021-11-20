@@ -40,6 +40,9 @@ typedef struct {
 	bip44_path_t wittnessPath;
 	public_key_t wittnessPathPubkey;
 
+	uint8_t textToDisplayBuf[NAME_STRING_MAX_LENGTH];
+	uint8_t valueBuf[200];
+
 } ins_sign_transaction_context_t;
 
 #endif // H_FIO_APP_SIGN_TRANSACTION

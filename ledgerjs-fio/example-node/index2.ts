@@ -6,8 +6,13 @@ const readline = require('readline');
 const wait = () => {
   const inputReader = require('wait-console-input')
   inputReader.wait('');
-}  
+}
 
+const getLine = (header: String) => {
+  const inputReader = require('wait-console-input')
+  let response: String = inputReader.readLine(header)
+  return response
+}
 
 async function example() {
   console.log("Running FIO examples");
@@ -31,12 +36,29 @@ async function example() {
   console.log("\n".repeat(3));
 
   console.log("\n".repeat(3));
+  console.log("Input: sendDataDisplay");
+  // wait()
+  let header: String = getLine("Enter header:");
+  let body  : String = getLine("Enter body:")
+  console.log("Response:");
+  console.log(await appFio.sendDataDisplay(header, body));
+  // wait()
+  console.log("\n".repeat(3));
+
+  console.log("\n".repeat(3));
   console.log("Input: endHash");
   // wait()
   console.log("Response:");
   console.log(await appFio.endHash());
   // wait()
   console.log("\n".repeat(3));
+
+
+
+
+
+
+
 
 //   console.log("Input: getSerial");
 //   wait()
