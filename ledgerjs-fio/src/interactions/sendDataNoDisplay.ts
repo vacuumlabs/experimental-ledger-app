@@ -11,13 +11,13 @@ const send = (params: {
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
 
 
-export function* sendDataNoDisplay(): Interaction<SendDataNoDisplay> {
+export function* sendDataNoDisplay(constant: String): Interaction<SendDataNoDisplay> {
     const P1_UNUSED = 0x00
     const P2_UNUSED = 0x00
     const response = yield send({
         p1: 0x07,
         p2: P2_UNUSED,
-        data: Buffer.from("abcd"),
+        data: Buffer.from(constant),
         expectedResponseLength: 0,  // Expect 0 bytes in response
     })
 

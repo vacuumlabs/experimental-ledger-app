@@ -15,8 +15,10 @@ describe("sendDataNoDisplay", async () => {
     })
 
     it("Should send data without displaying them on ledger", async () => {
-        const init_response = await fio.initHash()
-        const response = await fio.sendDataNoDisplay()
+        await fio.initHash()
+        const response = await fio.sendDataNoDisplay("abcd")
+        // Ledger ui will hang, because the hash has not ended (no ui_idle() call
+        // happened)
         expect(response.ret.length).to.equal(0)
     })
 })

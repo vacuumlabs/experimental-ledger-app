@@ -15,8 +15,9 @@ describe("sendDataDisplay", async () => {
     })
 
     it("Should send header and body and them on ledger", async () => {
-        const init_response = await fio.initHash()
+        await fio.initHash()
         const response = await fio.sendDataDisplay("Amount", "52")
+        await fio.endHash()
         expect(response.ret.length).to.equal(0)
     })
 })

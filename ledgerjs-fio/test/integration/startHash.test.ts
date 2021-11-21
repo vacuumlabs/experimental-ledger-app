@@ -16,6 +16,8 @@ describe("initHash", async () => {
 
     it("Should correctly start the tx hash and integrity hash", async () => {
         const response = await fio.initHash()
+        await fio.sendDataDisplay("Amount", "31")
+        await fio.endHash()
         expect(response.ret.length).to.equal(0)
     })
 })
