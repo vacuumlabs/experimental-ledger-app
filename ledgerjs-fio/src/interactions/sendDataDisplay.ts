@@ -16,7 +16,15 @@ export function* sendDataDisplay(headerText: String, bodyText: String): Interact
     const P2_UNUSED = 0x00
     let headerLen = headerText.length
     let bodyLen = bodyText.length
-    let buf = Buffer.concat([num_to_uint8_buf(headerLen), Buffer.from(headerText), num_to_uint8_buf(bodyLen), Buffer.from(bodyText), num_to_uint8_buf(1)])
+    let buf = Buffer.concat([
+        num_to_uint8_buf(150), // TODO pass parameter from this function as encoding
+        num_to_uint8_buf(headerLen),
+        Buffer.from(headerText),
+        num_to_uint8_buf(0),
+        num_to_uint8_buf(bodyLen),
+        Buffer.from(bodyText),
+        num_to_uint8_buf(0)
+    ])
     const response = yield send({
         p1: 0x08,
         p2: P2_UNUSED,

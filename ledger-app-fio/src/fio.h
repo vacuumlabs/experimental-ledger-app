@@ -32,4 +32,6 @@ void uint8array_name_to_string(uint8_t *value, size_t valueSize, char *out, size
 
 #define MAX_SINGLE_BYTE_LENGTH 127
 
+#define MAX_BODY_LENGTH 200
+
 #endif // H_FIO_APP_FIO
