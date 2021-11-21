@@ -27,21 +27,22 @@ async function example() {
   // wait()
   console.log("\n".repeat(3));
 
-  // console.log("\n".repeat(3));
-  // console.log("Input: sendDataNoDisplay");
-  // // wait()
-  // console.log("Response:");
-  // console.log(await appFio.sendDataNoDisplay());
-  // // wait()
-  // console.log("\n".repeat(3));
+  console.log("\n".repeat(3));
+  console.log("Input: sendDataNoDisplay");
+  let header1: String = getLine("Enter header:");
+  let body1  : String = getLine("Enter body:")
+  console.log("Response:");
+  console.log(await appFio.sendDataNoDisplay(header1, body1));
+  // wait()
+  console.log("\n".repeat(3));
 
   console.log("\n".repeat(3));
   console.log("Input: sendDataDisplay");
   // wait()
-  let header: String = getLine("Enter header:");
-  let body  : String = getLine("Enter body:")
+  let header2: String = getLine("Enter header:");
+  let body2  : String = getLine("Enter body:")
   console.log("Response:");
-  console.log(await appFio.sendDataDisplay(header, body));
+  console.log(await appFio.sendDataDisplay(header2, body2));
   // wait()
   console.log("\n".repeat(3));
 

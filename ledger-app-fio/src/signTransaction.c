@@ -52,6 +52,12 @@ const uint8_t ALLOWED_HASHES[][32] = {
     	0xcc, 0xec, 0x10, 0xb6, 0x38, 0xe4, 0xa1, 0xd1,
     	0xbd, 0x55, 0xd1, 0xc5, 0x17, 0x75, 0xae, 0x5c,
     	0x05, 0xf6, 0xd3, 0x86, 0xf8, 0xc1, 0x58, 0x7e
+	},
+	{
+    	0x10, 0x90, 0x54, 0x3d, 0xab, 0xd3, 0x5f, 0x8c,
+    	0x03, 0x7f, 0xdf, 0x66, 0x4b, 0xdf, 0x2a, 0x09,
+    	0x1b, 0x55, 0x73, 0x71, 0x22, 0x07, 0x66, 0x95,
+    	0xe4, 0x32, 0x30, 0xdd, 0xac, 0x3d, 0x80, 0x5a
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
@@ -105,6 +111,10 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 
 // ========================== SEND DATA NO DISPLAY =============================
 
+enum {
+	HANDLE_SEND_DATA_NO_DISPLAY_RESPOND = 300
+};
+
 static void signTx_handleSendDataNoDisplay_ui_runStep()
 {
 	// TRACE("UI step handleSendDataNoDisplay");
@@ -114,23 +124,67 @@ static void signTx_handleSendDataNoDisplay_ui_runStep()
 __noinline_due_to_stack__
 void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	// TRACE_STACK_USAGE();
-	{
-		// sanity checks
-		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	// // TRACE_STACK_USAGE();
+	// {
+	// 	// sanity checks
+	// 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	// 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	// }
+
+	// {
+	// 	// Add to integrity hash
+	// 	uint8_t ins_code[2] = {0x30, 0x07};
+	// 	sha_256_append(&ctx->integrityHashContext, ins_code, 2);
+
+	// 	// TODO create format, add encoding to integrity hash
+	// 	// TODO add constant to integrity hash
+
+	// 	// Add to tx hash
+	// 	sha_256_append(&ctx->hashContext, wireDataBuffer, wireDataSize);
+	// }
+
+	TRACE("Parse buffer: %d", wireDataBuffer[0]);
+
+	// Parse buffer
+	uint8_t header_len = wireDataBuffer[0];
+	ASSERT(header_len < NAME_STRING_MAX_LENGTH);
+	for(uint8_t i = 0; i < header_len; i++) {
+		ctx->textToDisplayBuf[i] = wireDataBuffer[1 + i]; // Offset by 1 byte containg header_len
 	}
+	ctx->textToDisplayBuf[header_len] = '\n';
+	TRACE("headerBuf length before: %d", strlen(ctx->textToDisplayBuf));
+
+	uint8_t body_len = wireDataBuffer[1 + header_len];
+	ASSERT(body_len < 200);
+	TRACE("Body len: %d", body_len);
+	for(uint8_t i = 0; i < body_len; i++) {
+		ctx->valueBuf[i] = wireDataBuffer[1 + header_len + 1 + i];
+	}
+	ctx->valueBuf[body_len] = '\0';
+	TRACE("valueBuf length before: %d", strlen(ctx->valueBuf));
+
+	uint8_t encoding[1] = {wireDataBuffer[1 + header_len + 1 + body_len]};
+	ASSERT(encoding[0] <= 1);
 
 	{
 		// Add to integrity hash
 		uint8_t ins_code[2] = {0x30, 0x07};
-		sha_256_append(&ctx->integrityHashContext, ins_code, 2);
-
-		// TODO create format, add encoding to integrity hash
-		// TODO add constant to integrity hash
+		sha_256_append(&ctx->integrityHashContext, ins_code, SIZEOF(ins_code));
+		sha_256_append(&ctx->integrityHashContext, ctx->textToDisplayBuf, header_len);
+		sha_256_append(&ctx->integrityHashContext, encoding, SIZEOF(encoding));
 
 		// Add to tx hash
-		sha_256_append(&ctx->hashContext, wireDataBuffer, wireDataSize);
+		sha_256_append(&ctx->hashContext, ctx->valueBuf, body_len);
+	}
+
+	ctx->ui_step = HANDLE_SEND_DATA_NO_DISPLAY_RESPOND;
+
+	security_policy_t policy = POLICY_DENY;
+	{
+		// get policy
+		policy = policyForSendDataNoDisplay();
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
 	}
 
 	signTx_handleSendDataNoDisplay_ui_runStep();

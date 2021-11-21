@@ -83,7 +83,11 @@ security_policy_t policyDerivePrivateKey(const bip44_path_t* pathSpec)
 }
 
 security_policy_t policyForSendDataDisplay() {
-	PROMPT(); // TODO implement correct policy
+	PROMPT();
+}
+
+security_policy_t policyForSendDataNoDisplay() {
+	ALLOW();
 }
 
 

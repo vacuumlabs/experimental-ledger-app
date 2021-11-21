@@ -2,8 +2,7 @@ import type {SendDataDisplay} from "../types/public"
 import utils from "../utils"
 import {INS} from "./common/ins"
 import type {Interaction, SendParams} from "./common/types"
-import { num_to_uint8_buf } from "../utils/serialize"
-import { Uint8_t } from "types/internal"
+import {num_to_uint8_buf} from "../utils/serialize"
 
 const send = (params: {
     p1: number,
@@ -11,12 +10,6 @@ const send = (params: {
     data: Buffer,
     expectedResponseLength?: number
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
-
-// function num_to_uint8_buf(value: number): Buffer {
-//     const data = Buffer.alloc(1)
-//     data.writeUInt8(value, 0)
-//     return data
-// }
 
 export function* sendDataDisplay(headerText: String, bodyText: String): Interaction<SendDataDisplay> {
     const P1_UNUSED = 0x00
