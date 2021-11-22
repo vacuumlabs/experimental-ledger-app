@@ -1,4 +1,5 @@
 import TransportNodeHid from "@ledgerhq/hw-transport-node-hid";
+import { ENCODING_STRING, ENCODING_UINT8 } from "../src/utils/parse";
 import { Fio, HARDENED, GetPublicKeyRequest, SignTransactionRequest, Transaction } from "../src/fio";
 const fetch = require('node-fetch')
 const readline = require('readline');
@@ -32,7 +33,7 @@ async function example() {
   let header1: String = getLine("Enter header:");
   let body1  : String = getLine("Enter body:")
   console.log("Response:");
-  console.log(await appFio.sendDataNoDisplay(header1, body1));
+  console.log(await appFio.sendDataNoDisplay(header1, body1, ENCODING_STRING));
   // wait()
   console.log("\n".repeat(3));
 
@@ -42,7 +43,7 @@ async function example() {
   let header2: String = getLine("Enter header:");
   let body2  : String = getLine("Enter body:")
   console.log("Response:");
-  console.log(await appFio.sendDataDisplay(header2, body2));
+  console.log(await appFio.sendDataDisplay(header2, body2, ENCODING_UINT8));
   // wait()
   console.log("\n".repeat(3));
 

@@ -18,6 +18,9 @@ import type {
 } from "../types/internal"
 import {ParsedAction, ParsedTransferFIOTokensData} from "../types/internal"
 
+export const ENCODING_STRING = 150
+export const ENCODING_UINT8 = 151
+
 export const MAX_UINT_64_STR = "18446744073709551615"
 
 export const isString = (data: unknown): data is string =>

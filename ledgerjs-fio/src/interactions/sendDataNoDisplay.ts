@@ -2,7 +2,9 @@ import type {SendDataNoDisplay} from "../types/public"
 import utils from "../utils"
 import {INS} from "./common/ins"
 import type {Interaction, SendParams} from "./common/types"
-import {num_to_uint8_buf} from "../utils/serialize"
+import {uint8_to_buf} from "../utils/serialize"
+import { ENCODING_STRING, ENCODING_UINT8 } from "../../src/utils/parse"
+import { Uint8_t } from "types/internal"
 
 const send = (params: {
     p1: number,
@@ -11,20 +13,34 @@ const send = (params: {
     expectedResponseLength?: number
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
 
-export function* sendDataNoDisplay(headerText: String, bodyText: String): Interaction<SendDataNoDisplay> {
+export function* sendDataNoDisplay(header: String, body: String, encoding: number): Interaction<SendDataNoDisplay> {
     const P1_UNUSED = 0x00
     const P2_UNUSED = 0x00
-    let headerLen = headerText.length
-    let bodyLen = bodyText.length
-    let buf = Buffer.concat([
-        num_to_uint8_buf(150),
-        num_to_uint8_buf(headerLen),
-        Buffer.from(headerText),
-        num_to_uint8_buf(0),
-        num_to_uint8_buf(bodyLen),
-        Buffer.from(bodyText),
-        num_to_uint8_buf(0)
-    ])
+    let headerLen = header.length
+    let bodyLen = body.length
+    let buf = null
+    if(encoding == ENCODING_STRING) {
+        buf = Buffer.concat([
+            uint8_to_buf(encoding as Uint8_t),
+            uint8_to_buf(headerLen as Uint8_t),
+            Buffer.from(header),
+            uint8_to_buf(0 as Uint8_t),
+            uint8_to_buf(bodyLen as Uint8_t),
+            Buffer.from(body),
+            uint8_to_buf(0 as Uint8_t)
+        ])
+    } else {
+        let bodyUint = Number(body);
+        buf = Buffer.concat([
+            uint8_to_buf(encoding as Uint8_t),
+            uint8_to_buf(headerLen as Uint8_t),
+            Buffer.from(header),
+            uint8_to_buf(0 as Uint8_t),
+            uint8_to_buf(1 as Uint8_t), // Uint8_t is 1 byte
+            uint8_to_buf(bodyUint as Uint8_t),
+            uint8_to_buf(0 as Uint8_t)
+        ])
+    }
     const response = yield send({
         p1: 0x07,
         p2: P2_UNUSED,

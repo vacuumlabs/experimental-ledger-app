@@ -14,13 +14,6 @@ export function uint8_to_buf(value: Uint8_t): Buffer {
     return data
 }
 
-export function num_to_uint8_buf(value: number): Buffer {
-    assert(isUint8(value), 'invalid uint8')
-    const data = Buffer.alloc(1)
-    data.writeUInt8(value, 0)
-    return data
-}
-
 export function uint16_to_buf(value: Uint16_t | Uint8_t): Buffer {
     assert(isUint16(value), 'invalid uint16')
 

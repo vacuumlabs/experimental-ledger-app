@@ -230,20 +230,20 @@ export class Fio {
         return yield* endHash()
     }
 
-    async sendDataNoDisplay(headerText: String, bodyText: String): Promise<SendDataNoDisplayResponse> {
-        return interact(this._sendDataNoDisplay(headerText, bodyText), this._send);
+    async sendDataNoDisplay(header: String, body: String, encoding: number): Promise<SendDataNoDisplayResponse> {
+        return interact(this._sendDataNoDisplay(header, body, encoding), this._send);
     }
 
-    *_sendDataNoDisplay(headerText: String, bodyText: String): Interaction<SendDataNoDisplayResponse> {
-        return yield* sendDataNoDisplay(headerText, bodyText)
+    *_sendDataNoDisplay(header: String, body: String, encoding: number): Interaction<SendDataNoDisplayResponse> {
+        return yield* sendDataNoDisplay(header, body, encoding)
     }
 
-    async sendDataDisplay(headerText: String, bodyText: String): Promise<SendDataDisplayResponse> {
-        return interact(this._sendDataDisplay(headerText, bodyText), this._send);
+    async sendDataDisplay(header: String, body: String, encoding: number): Promise<SendDataDisplayResponse> {
+        return interact(this._sendDataDisplay(header, body, encoding), this._send);
     }
 
-    *_sendDataDisplay(headerText: String, bodyText: String): Interaction<SendDataDisplayResponse> {
-        return yield* sendDataDisplay(headerText, bodyText);
+    *_sendDataDisplay(header: String, body: String, encoding: number): Interaction<SendDataDisplayResponse> {
+        return yield* sendDataDisplay(header, body, encoding);
     }
 
     /**

@@ -9,7 +9,7 @@
 handler_fn_t signTransaction_handleAPDU;
 
 typedef struct {
-	sha_256_context_t hashContext;
+	sha_256_context_t txHashContext;
 	sha_256_context_t integrityHashContext;
 
 	network_type_t network;
@@ -26,7 +26,7 @@ typedef struct {
 	//only used in ACTION HEADER step
 	action_type_t action_type;
 
-	//only used in ACTION_AUTHORIZATION step
+	//only used in ACTION_AUTHORIZATION steps
 	char actionValidationPermission[NAME_STRING_MAX_LENGTH];
 
 	//only used in ACTION_DATA step
@@ -40,8 +40,8 @@ typedef struct {
 	bip44_path_t wittnessPath;
 	public_key_t wittnessPathPubkey;
 
-	char* textToDisplayBuf;
-	char* valueBuf;
+	char* headerBuf;
+	char* bodyBuf;
 	uint8_t encoding;
 
 } ins_sign_transaction_context_t;
