@@ -90,17 +90,17 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 	signTx_handleInit_ui_runStep();
 }
 
-// // ============================ SEND DATA HELPERS ==============================
-// // wireDataBuffer format:
-// // SIZE_B 			MEANING
-// // -------------------------
-// // 1 				encoding
-// // 1 				header_length
-// // header_length	header
-// // 1				0 (trailing 0)
-// // 1 				body_length
-// // body_length 		body
-// // 1				0 (trailing 0)
+// ============================ SEND DATA HELPERS ==============================
+// wireDataBuffer format:
+// SIZE_B 			MEANING
+// -------------------------
+// 1 				encoding
+// 1 				header_length
+// header_length	header
+// 1				0 (trailing 0)
+// 1 				body_length
+// body_length 		body
+// 1				0 (trailing 0)
 // void parseSendDataBuffer(uint8_t* wireDataBuffer, size_t wireDataSize, uint8_t* headerLength, uint8_t* bodyLength) {
 // 	struct {
 // 		uint8_t encoding[1];
@@ -173,14 +173,18 @@ void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 
 	sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
 
-	ctx->ui_step = HANDLE_SEND_DATA_NO_DISPLAY_RESPOND;
-
-	security_policy_t policy = POLICY_DENY;
+	security_policy_t policy = policyForSendDataNoDisplay();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 	{
-		// get policy
-		policy = policyForSendDataNoDisplay();
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_SEND_DATA_NO_DISPLAY_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	signTx_handleSendDataNoDisplay_ui_runStep();
@@ -265,14 +269,18 @@ void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 		sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
 	}
 
-	ctx->ui_step = HANDLE_SEND_DATA_DISPLAY_DETAILS;
-
-	security_policy_t policy = POLICY_DENY;
+	security_policy_t policy = policyForSendDataDisplay();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 	{
-		// get policy
-		policy = policyForSendDataDisplay();
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_SEND_DATA_DISPLAY_DETAILS);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	signTx_handleSendDataDisplay_ui_runStep();
