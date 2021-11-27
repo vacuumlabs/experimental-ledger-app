@@ -2,9 +2,14 @@ import type {SendDataNoDisplay} from "../types/public"
 import utils from "../utils"
 import {INS} from "./common/ins"
 import type {Interaction, SendParams} from "./common/types"
-import {uint8_to_buf} from "../utils/serialize"
-import { ENCODING_STRING, ENCODING_UINT8 } from "../../src/utils/parse"
-import { Uint8_t } from "types/internal"
+import {uint8_to_buf, uint16_to_buf, uint32_to_buf} from "../utils/serialize"
+import {Uint8_t, Uint16_t, Uint32_t} from "types/internal"
+import {
+    ENCODING_STRING,
+    ENCODING_UINT8,
+    ENCODING_UINT16,
+    ENCODING_UINT32
+} from "../../src/utils/parse"
 
 const send = (params: {
     p1: number,
@@ -30,16 +35,31 @@ export function* sendDataNoDisplay(header: String, body: String, encoding: numbe
             uint8_to_buf(0 as Uint8_t)
         ])
     } else {
-        let bodyUint = Number(body);
-        buf = Buffer.concat([
+        let commonAttrsPrefix = [
             uint8_to_buf(encoding as Uint8_t),
             uint8_to_buf(headerLen as Uint8_t),
             Buffer.from(header),
-            uint8_to_buf(0 as Uint8_t),
-            uint8_to_buf(1 as Uint8_t), // Uint8_t is 1 byte
-            uint8_to_buf(bodyUint as Uint8_t),
+            uint8_to_buf(0 as Uint8_t), // Trailing 0
+        ]
+        let commonAttrsSuffix = [
             uint8_to_buf(0 as Uint8_t)
-        ])
+        ]
+        let bodyUint = Number(body);
+        if(encoding == ENCODING_UINT8) {
+            buf = Buffer.concat([
+                ...commonAttrsPrefix, uint8_to_buf(1 as Uint8_t), uint8_to_buf(bodyUint as Uint8_t), ...commonAttrsSuffix
+            ])
+        } else if(encoding == ENCODING_UINT16) {
+            buf = Buffer.concat([
+                ...commonAttrsPrefix, uint8_to_buf(2 as Uint8_t), uint16_to_buf(bodyUint as Uint16_t), ...commonAttrsSuffix
+            ])
+        } else if(encoding == ENCODING_UINT32) {
+            buf = Buffer.concat([
+                ...commonAttrsPrefix, uint8_to_buf(4 as Uint8_t), uint32_to_buf(bodyUint as Uint32_t), ...commonAttrsSuffix
+            ])
+        } else {
+            throw Error("Invalid encoding");
+        }
     }
     const response = yield send({
         p1: 0x07,

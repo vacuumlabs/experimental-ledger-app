@@ -42,6 +42,10 @@ typedef struct {
 
 	char* headerBuf;
 	char* bodyBuf;
+	uint8_t uint8Body;
+	uint16_t uint16Body;
+	uint32_t uint32Body;
+	uint64_t uint64Body;
 	uint8_t encoding;
 
 } ins_sign_transaction_context_t;

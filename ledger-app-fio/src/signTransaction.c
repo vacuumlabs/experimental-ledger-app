@@ -34,13 +34,28 @@ const uint8_t ALLOWED_HASHES[][32] = {
     	0x3c, 0x04, 0xca, 0x78, 0xe0, 0x43, 0x6d, 0x06,
     	0x38, 0xea, 0xf9, 0xe2, 0x92, 0x6e, 0xcf, 0x5f,
    		0x38, 0x98, 0x78, 0xe0, 0xe8, 0xfe, 0x0f, 0xce
+	},
+	{
+		0xd3, 0xe9, 0x9e, 0x2d, 0xfc, 0x6e, 0x22, 0x82,
+		0x52, 0x41, 0xf4, 0x01, 0x48, 0x3b, 0x96, 0xee,
+		0x74, 0x87, 0x16, 0xd4, 0xef, 0x09, 0xbc, 0x7b,
+		0x36, 0xb2, 0x5a, 0x75, 0x38, 0xa3, 0xbb, 0x2a
+	},
+	{
+		0xec, 0x08, 0x61, 0x57, 0x31, 0x8c, 0x13, 0x40,
+		0xe7, 0xd1, 0xf3, 0xf3, 0x4c, 0xc7, 0x2e, 0xeb,
+		0x36, 0x0d, 0x63, 0x08, 0xe4, 0x48, 0x66, 0x4c,
+		0x11, 0x32, 0xca, 0xe6, 0x1e, 0x21, 0x25, 0x2d
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
 
 enum {
 	ENCODING_STRING = 150,
-	ENCODING_UINT8
+	ENCODING_UINT8,
+	ENCODING_UINT16,
+	ENCODING_UINT32,
+	ENCODING_UINT64
 };
 
 // ============================== INIT ==============================
@@ -160,18 +175,52 @@ void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	VALIDATE(expectedWireData1Length + expectedWireData2Length == wireDataSize, ERR_INVALID_DATA);
 	str_validateNullTerminatedTextBuffer(wireData1->header, wireData1->headerLength[0]);
 
-	str_validateNullTerminatedTextBuffer(wireData2->body, wireData2->bodyLength[0]);
-
 	ctx->headerBuf = (char*)wireData1->header;
 	ctx->encoding = u1be_read(wireData1->encoding);
-	VALIDATE(ctx->encoding == ENCODING_STRING || ctx->encoding == ENCODING_UINT8, ERR_INVALID_DATA);
 	ctx->bodyBuf = (char*)wireData2->body;
 
-	uint8_t constants[] = {0x30, 0x07, ctx->encoding};
-	sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
-	sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
+	if(ctx->encoding == ENCODING_STRING) {
+		str_validateNullTerminatedTextBuffer(wireData2->body, wireData2->bodyLength[0]);
+	}
+	
+	VALIDATE(ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_UINT64, ERR_INVALID_DATA);
 
-	sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
+	// Set correct body and add to tx
+	// Always add numbers to ctx->uint64Body for displaying it
+	switch(ctx->encoding) {
+		case ENCODING_UINT8:
+			ctx->uint8Body = u1be_read((char*)wireData2->body);
+			ctx->uint64Body = (uint64_t)ctx->uint8Body;
+			sha_256_append(&ctx->txHashContext, &ctx->uint8Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_UINT16:
+			ctx->uint16Body = u2be_read((char*)wireData2->body);
+			ctx->uint64Body = (uint64_t)ctx->uint16Body;
+			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint16Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_UINT32:
+			ctx->uint32Body = u4be_read((char*)wireData2->body);
+			ctx->uint64Body = (uint64_t)ctx->uint32Body;
+			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint32Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_UINT64:
+			ctx->uint64Body = u8be_read((char*)wireData2->body);
+			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint64Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_STRING:
+			sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
+			break;
+		default:
+			ASSERT(1 < 0);
+			break;
+	}
+
+	{
+		// Add to integrity hash
+		uint8_t constants[] = {0x30, 0x07, ctx->encoding};
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
+	}
 
 	security_policy_t policy = policyForSendDataNoDisplay();
 	TRACE("Policy: %d", (int) policy);
@@ -210,7 +259,7 @@ static void signTx_handleSendDataDisplay_ui_runStep()
 		if(ctx->encoding == ENCODING_STRING) {
 			ui_displayPaginatedText(ctx->headerBuf, ctx->bodyBuf, this_fn);
 		} else {
-			ui_displayUint64Screen(ctx->headerBuf, (uint64_t)ctx->bodyBuf[0], this_fn);
+			ui_displayUint64Screen(ctx->headerBuf, ctx->uint64Body, this_fn);
 		}
 	}
 
@@ -224,14 +273,6 @@ static void signTx_handleSendDataDisplay_ui_runStep()
 __noinline_due_to_stack__
 void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	TRACE_STACK_USAGE();
-	{
-		// sanity checks
-		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-		ASSERT(wireDataSize >= 3); // At least text_to_display_len, data_len, encoding have to be present
-	}
-
 	struct {
 		uint8_t encoding[1];
 		uint8_t headerLength[1];
@@ -248,25 +289,50 @@ void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 	VALIDATE(expectedWireData1Length + expectedWireData2Length == wireDataSize, ERR_INVALID_DATA);
 	str_validateNullTerminatedTextBuffer(wireData1->header, wireData1->headerLength[0]);
 
+	ctx->headerBuf = (char*)wireData1->header;
 	ctx->encoding = u1be_read(wireData1->encoding);
-	VALIDATE(ctx->encoding == ENCODING_STRING || ctx->encoding == ENCODING_UINT8, ERR_INVALID_DATA);
+	ctx->bodyBuf = (char*)wireData2->body;
 
 	if(ctx->encoding == ENCODING_STRING) {
 		str_validateNullTerminatedTextBuffer(wireData2->body, wireData2->bodyLength[0]);
 	}
 
-	ctx->headerBuf = (char*)wireData1->header;
+	VALIDATE(ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_UINT64, ERR_INVALID_DATA);
 
-	ctx->bodyBuf = wireData2->body;
+	// Set correct body and add to tx
+	// Always add numbers to ctx->uint64Body for displaying it
+	switch(ctx->encoding) {
+		case ENCODING_UINT8:
+			ctx->uint8Body = u1be_read((char*)wireData2->body);
+			ctx->uint64Body = (uint64_t)ctx->uint8Body;
+			sha_256_append(&ctx->txHashContext, &ctx->uint8Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_UINT16:
+			ctx->uint16Body = u2be_read((char*)wireData2->body);
+			ctx->uint64Body = (uint64_t)ctx->uint16Body;
+			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint16Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_UINT32:
+			ctx->uint32Body = u4be_read((char*)wireData2->body);
+			ctx->uint64Body = (uint64_t)ctx->uint32Body;
+			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint32Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_UINT64:
+			ctx->uint64Body = u8be_read((char*)wireData2->body);
+			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint64Body, wireData2->bodyLength[0]);
+			break;
+		case ENCODING_STRING:
+			sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
+		default:
+			ASSERT(1 < 0);
+			break;
+	}
 
 	{
 		// Add to integrity hash
 		uint8_t constants[] = {0x30, 0x08, ctx->encoding};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
-
-		// Add to tx hash
-		sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
 	}
 
 	security_policy_t policy = policyForSendDataDisplay();

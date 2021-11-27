@@ -18,8 +18,12 @@ import type {
 } from "../types/internal"
 import {ParsedAction, ParsedTransferFIOTokensData} from "../types/internal"
 
-export const ENCODING_STRING = 150
-export const ENCODING_UINT8 = 151
+export const BASE_FOR_ENCODING_IDS = 150
+export const ENCODING_STRING = BASE_FOR_ENCODING_IDS + 0
+export const ENCODING_UINT8 = BASE_FOR_ENCODING_IDS + 1
+export const ENCODING_UINT16 = BASE_FOR_ENCODING_IDS + 2
+export const ENCODING_UINT32 = BASE_FOR_ENCODING_IDS + 3
+export const ENCODING_UINT64 = BASE_FOR_ENCODING_IDS + 4
 
 export const MAX_UINT_64_STR = "18446744073709551615"
 
