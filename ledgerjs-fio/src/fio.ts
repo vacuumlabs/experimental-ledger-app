@@ -26,8 +26,7 @@ import {runTests} from "./interactions/runTests"
 import {signTransaction} from "./interactions/signTransaction"
 import {initHash} from "./interactions/initHash"
 import {endHash} from "./interactions/endHash"
-import {sendDataNoDisplay} from "./interactions/sendDataNoDisplay"
-import {sendDataDisplay} from "./interactions/sendDataDisplay"
+import {sendData} from "./interactions/sendData"
 import type {
     HexString,
     ParsedAction,
@@ -38,7 +37,7 @@ import type {
 } from './types/internal'
 import type {
     Action, ActionAuthorisation, BIP32Path, DeviceCompatibility, PublicKey,
-    Serial, Init, End, SendDataNoDisplay, SendDataDisplay, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
+    Serial, Init, End, SendData, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
 } from './types/public'
 import utils from "./utils"
 import {assert} from './utils/assert'
@@ -150,7 +149,7 @@ export class Fio {
             "signTransaction",
             "initHash",
             "endHash",
-            "sendDataNoDisplay"
+            "sendData"
         ]
         this.transport.decorateAppAPIMethods(this, methods, scrambleKey)
         this._send = async (params: SendParams): Promise<Buffer> => {
@@ -231,20 +230,12 @@ export class Fio {
         return yield* endHash(parsedPath)
     }
 
-    async sendDataNoDisplay(header: string, body: string, encoding: number): Promise<SendDataNoDisplayResponse> {
-        return interact(this._sendDataNoDisplay(header, body, encoding), this._send);
+    async sendData(header: string, body: string, encoding: number, display: boolean = false): Promise<SendDataResponse> {
+        return interact(this._sendData(header, body, encoding, display), this._send);
     }
 
-    *_sendDataNoDisplay(header: string, body: string, encoding: number): Interaction<SendDataNoDisplayResponse> {
-        return yield* sendDataNoDisplay(header, body, encoding)
-    }
-
-    async sendDataDisplay(header: string, body: string, encoding: number): Promise<SendDataDisplayResponse> {
-        return interact(this._sendDataDisplay(header, body, encoding), this._send);
-    }
-
-    *_sendDataDisplay(header: string, body: string, encoding: number): Interaction<SendDataDisplayResponse> {
-        return yield* sendDataDisplay(header, body, encoding);
+    *_sendData(header: string, body: string, encoding: number, display: boolean = false): Interaction<SendDataResponse> {
+        return yield* sendData(header, body, encoding, display);
     }
 
     /**
@@ -337,9 +328,7 @@ export type InitHashResponse = Init
 
 export type EndHashResponse = End
 
-export type SendDataNoDisplayResponse = SendDataNoDisplay
-
-export type SendDataDisplayResponse = SendDataDisplay
+export type SendDataResponse = SendData
 
 /**
  * Get public key ([[Fio.getPublicKey]]) request data

@@ -30,10 +30,10 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
 const uint8_t ALLOWED_HASHES[][32] = {
 	{
-		0x7a, 0x9e, 0xa7, 0xd9, 0x1a, 0x63, 0xe0, 0xdf,
-		0xd9, 0x23, 0xce, 0xee, 0x7f, 0xd2, 0x0f, 0x5d,
-		0xf4, 0x44, 0x61, 0x32, 0xfa, 0xc0, 0x09, 0xe1,
-		0x07, 0x24, 0xb7, 0x2d, 0x5e, 0xac, 0x79, 0x8a
+		0xf5, 0xdd, 0xdf, 0x66, 0x30, 0xfe, 0x2f, 0x1c,
+		0x8f, 0xd7, 0xe3, 0xfb, 0x25, 0x1c, 0xde, 0x9a,
+		0xb9, 0x22, 0x10, 0xc9, 0x24, 0x96, 0xb6, 0x10,
+		0xe2, 0xf5, 0xf9, 0xef, 0x96, 0x96, 0x9e, 0x6a
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
@@ -64,7 +64,6 @@ static void signTx_handleInit_ui_runStep()
 __noinline_due_to_stack__
 void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	// TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
@@ -78,9 +77,7 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 
 		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
 
-		// TRACE("SHA_256_init");
 		sha_256_init(&ctx->txHashContext);
-		TRACE("APPEND CHAIN ID");
 		sha_256_append(&ctx->txHashContext, wireData->chainId, SIZEOF(wireData->chainId));
 
 		uint8_t ins_code[2] = {0x30, 0x01};
@@ -89,137 +86,32 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 		sha_256_append(&ctx->integrityHashContext, ins_code, SIZEOF(ins_code));
 
 		ctx->network = getNetworkByChainId(wireData->chainId, SIZEOF(wireData->chainId));
-		// TRACE("Network %d:", ctx->network);
 	}
 
 	signTx_handleInit_ui_runStep();
 }
 
-// ========================== SEND DATA NO DISPLAY =============================
-
+// ========================== SEND DATA =============================
+DISPLAY
 enum {
-	HANDLE_SEND_DATA_NO_DISPLAY_RESPOND = 300
-};
-
-static void signTx_handleSendDataNoDisplay_ui_runStep()
-{
-	// TRACE("UI step handleSendDataNoDisplay");
-	respondSuccessEmptyMsg();
-}
-
-__noinline_due_to_stack__
-void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
-{
-	struct {
-		uint8_t encoding[1];
-		uint8_t headerLength[1];
-		uint8_t header[NAME_STRING_MAX_LENGTH];
-	}* wireData1 = (void*) wireDataBuffer;
-	const uint8_t expectedWireData1Length = SIZEOF(*wireData1) - NAME_STRING_MAX_LENGTH + wireData1->headerLength[0] + 1;
-
-	struct {
-		uint8_t bodyLength[1];
-		uint8_t body[MAX_BODY_LENGTH];
-	}* wireData2 = ((void*) wireDataBuffer) + expectedWireData1Length;
-	const uint8_t expectedWireData2Length = SIZEOF(*wireData2) - MAX_BODY_LENGTH + wireData2->bodyLength[0] + 1;
-
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
-	TRACE_BUFFER(wireData1, expectedWireData1Length);
-	TRACE_BUFFER(wireData2, expectedWireData2Length);
-
-	TRACE("expected length: %d, actual length: %d", expectedWireData1Length + expectedWireData2Length, wireDataSize);
-
-	VALIDATE(expectedWireData1Length + expectedWireData2Length == wireDataSize, ERR_INVALID_DATA);
-	str_validateNullTerminatedTextBuffer(wireData1->header, wireData1->headerLength[0]);
-
-	ctx->headerBuf = (char*)wireData1->header;
-	ctx->encoding = u1be_read(wireData1->encoding);
-	ctx->bodyBuf = (char*)wireData2->body;
-
-	if(ctx->encoding == ENCODING_STRING) {
-		str_validateNullTerminatedTextBuffer(wireData2->body, wireData2->bodyLength[0]);
-	}
-
-	TRACE("encoding: %d, ENCODING_STRING: %d, ENCODING_HEX: %d", ctx->encoding, ENCODING_STRING, ENCODING_HEX);
-	VALIDATE(ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_HEX, ERR_INVALID_DATA);
-
-	// Set correct body and add to tx
-	// Always add numbers to ctx->uint64Body for displaying it
-	TRACE("APPEND IN SEND DATA NO DISPLAY");
-	switch(ctx->encoding) {
-		case ENCODING_UINT8:
-			ctx->uint8Body = u1be_read((char*)wireData2->body);
-			ctx->uint64Body = (uint64_t)ctx->uint8Body;
-			sha_256_append(&ctx->txHashContext, &ctx->uint8Body, wireData2->bodyLength[0]);
-			break;
-		case ENCODING_UINT16:
-			ctx->uint16Body = u2be_read((char*)wireData2->body);
-			ctx->uint64Body = (uint64_t)ctx->uint16Body;
-			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint16Body, wireData2->bodyLength[0]);
-			break;
-		case ENCODING_UINT32:
-			ctx->uint32Body = u4be_read((char*)wireData2->body);
-			ctx->uint64Body = (uint64_t)ctx->uint32Body;
-			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint32Body, wireData2->bodyLength[0]);
-			break;
-		case ENCODING_UINT64:
-			ctx->uint64Body = u8be_read((char*)wireData2->body);
-			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint64Body, wireData2->bodyLength[0]);
-			break;
-		case ENCODING_HEX:
-		case ENCODING_STRING:
-			sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
-			break;
-		default:
-			ASSERT(1 < 0);
-			break;
-	}
-
-	{
-		// Add to integrity hash
-		uint8_t constants[] = {0x30, 0x07, ctx->encoding};
-		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
-		sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
-	}
-
-	security_policy_t policy = policyForSendDataNoDisplay();
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-	{
-		// select UI steps
-		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_SEND_DATA_NO_DISPLAY_RESPOND);
-#	undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-	}
-
-	signTx_handleSendDataNoDisplay_ui_runStep();
-}
-
-// ========================== SEND DATA DISPLAY =============================
-
-enum {
-	HANDLE_SEND_DATA_DISPLAY_DETAILS = 500,
+	HANDLE_SEND_DATA_DISPLAY = 500,
 	HANDLE_SEND_DATA_RESPOND,
 	HANDLE_SEND_DATA_INVALID
 };
 
-static void signTx_handleSendDataDisplay_ui_runStep()
+static void signTx_handleSendData_ui_runStep()
 {
-	TRACE("UI step %d", ctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTx_handleSendDataDisplay_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleSendData_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_SEND_DATA_DISPLAY_DETAILS) {
+	UI_STEP(HANDLE_SEND_DATA_DISPLAY) {
 		if(ctx->encoding == ENCODING_STRING) {
 			ui_displayPaginatedText(ctx->headerBuf, ctx->bodyBuf, this_fn);
-		} else {
+		} else if(ENCODING_UINT8 <= ctx->encoding && ctx->encoding <= ENCODING_UINT64) {
 			ui_displayUint64Screen(ctx->headerBuf, ctx->uint64Body, this_fn);
+		} else {
+			THROW(ERR_NOT_IMPLEMENTED);
 		}
 	}
 
@@ -231,7 +123,7 @@ static void signTx_handleSendDataDisplay_ui_runStep()
 }
 
 __noinline_due_to_stack__
-void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	struct {
 		uint8_t encoding[1];
@@ -261,7 +153,6 @@ void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 
 	// Set correct body and add to tx
 	// Always add numbers to ctx->uint64Body for displaying it
-	TRACE("APPEND IN SEND_DATA_DISPLAY");
 	switch(ctx->encoding) {
 		case ENCODING_UINT8:
 			ctx->uint8Body = u1be_read((char*)wireData2->body);
@@ -293,28 +184,27 @@ void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 
 	{
 		// Add to integrity hash
-		uint8_t constants[] = {0x30, 0x08, ctx->encoding};
+		uint8_t constants[] = {0x30, 0x07, p2, ctx->encoding, wireData2->bodyLength[0]};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
 	}
 
-	security_policy_t policy = policyForSendDataDisplay();
-	TRACE("Policy: %d", (int) policy);
+	security_policy_t policy = policyForSendData(p2);
 	ENSURE_NOT_DENIED(policy);
 	{
 		// select UI steps
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_SEND_DATA_DISPLAY_DETAILS);
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_SEND_DATA_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_SEND_DATA_RESPOND);
 #	undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 	}
 
-	signTx_handleSendDataDisplay_ui_runStep();
+	signTx_handleSendData_ui_runStep();
 }
-
 
 // =============================== END ==================================
 
@@ -343,7 +233,6 @@ static void signTx_handleEnd_ui_runStep()
 __noinline_due_to_stack__
 void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	// TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
@@ -353,7 +242,6 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 	explicit_bzero(&ctx->wittnessPath, SIZEOF(ctx->wittnessPath));
 	{
 		// parse
-		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		size_t parsedSize = bip44_parseFromWire(&ctx->wittnessPath, wireDataBuffer, wireDataSize);
 		VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
 	}
@@ -366,13 +254,11 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 		//Extension points
 		uint8_t epBuf[1];
 		explicit_bzero(epBuf, SIZEOF(epBuf));
-		TRACE("APPEND EXTENSION POINTS");
 		sha_256_append(&ctx->txHashContext, epBuf, SIZEOF(epBuf));
 
 		//We finish the tx hash appending a 32-byte empty buffer
 		uint8_t txHashBuf[32];
 		explicit_bzero(txHashBuf, SIZEOF(txHashBuf));
-		TRACE("APPEND 32 zero bytes to finish");
 		sha_256_append(&ctx->txHashContext, txHashBuf, SIZEOF(txHashBuf));
 
 		//we get the resulting tx hash
@@ -488,14 +374,8 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 #	define  CASE(P1, HANDLER) case P1: return HANDLER;
 #	define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x01, signTx_handleInitAPDU);
-		// CASE(0x02, signTx_handleHeaderAPDU);
-		// CASE(0x03, signTx_handleActionHeaderAPDU);
-		// CASE(0x04, signTx_handleActionAuthorizationAPDU);
-		// CASE(0x05, signTx_handleActionDataAPDU);
-		// CASE(0x10, signTx_handleWitnessAPDU);
 		CASE(0x06, signTx_handleEndAPDU);
-		CASE(0x07, signTx_handleSendDataNoDisplayAPDU);
-		CASE(0x08, signTx_handleSendDataDisplayAPDU);
+		CASE(0x07, signTx_handleSendDataAPDU);
 		DEFAULT(NULL)
 #	undef   CASE
 #	undef   DEFAULT

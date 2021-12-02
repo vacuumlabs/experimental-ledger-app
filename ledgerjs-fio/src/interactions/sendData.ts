@@ -1,4 +1,4 @@
-import type {SendDataDisplay} from "../types/public"
+import type {SendData} from "../types/public"
 import utils from "../utils"
 import {INS} from "./common/ins"
 import type {Interaction, SendParams} from "./common/types"
@@ -12,7 +12,7 @@ import {
     ENCODING_UINT64,
     ENCODING_DATETIME,
     ENCODING_HEX
-} from "../../src/utils/parse"
+} from "../utils/parse"
 
 const send = (params: {
     p1: number,
@@ -21,7 +21,7 @@ const send = (params: {
     expectedResponseLength?: number
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
 
-export function* sendDataDisplay(header: string, body: string, encoding: number): Interaction<SendDataDisplay> {
+export function* sendData(header: string, body: string, encoding: number, display: boolean = false): Interaction<SendData> {
     const P1_UNUSED = 0x00
     const P2_UNUSED = 0x00
     let headerLen = header.length
@@ -89,9 +89,11 @@ export function* sendDataDisplay(header: string, body: string, encoding: number)
             throw Error("Invalid encoding");
         }
     }
+    const DISPLAY = 0x01;
+    const DONT_DISPLAY = 0x02;
     const response = yield send({
-        p1: 0x08,
-        p2: P2_UNUSED,
+        p1: 0x07,
+        p2: display ? DISPLAY : DONT_DISPLAY,
         data: buf,
         expectedResponseLength: 0,  // Expect 0 bytes in response
     })

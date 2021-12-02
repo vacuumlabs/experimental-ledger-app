@@ -8,6 +8,11 @@
 
 handler_fn_t signTransaction_handleAPDU;
 
+enum {
+	DISPLAY = 1,
+	DONT_DISPLAY
+};
+
 typedef struct {
 	sha_256_context_t txHashContext;
 	sha_256_context_t integrityHashContext;

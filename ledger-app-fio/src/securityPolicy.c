@@ -82,12 +82,12 @@ security_policy_t policyDerivePrivateKey(const bip44_path_t* pathSpec)
 	ALLOW();
 }
 
-security_policy_t policyForSendDataDisplay() {
-	PROMPT();
+security_policy_t policyForSendData(uint8_t should_display) {
+	if(should_display == DISPLAY) {
+		PROMPT();
+	} else if(should_display == DONT_DISPLAY) {
+		ALLOW();
+	} else {
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
 }
-
-security_policy_t policyForSendDataNoDisplay() {
-	ALLOW();
-}
-
-

@@ -79,11 +79,7 @@ export type Init = {
 
 export type End = SignedTransactionData
 
-export type SendDataNoDisplay = {
-    ret: string
-}
-
-export type SendDataDisplay = {
+export type SendData= {
     ret: string
 }
 
