@@ -77,9 +77,7 @@ export type Init = {
     ret: string
 };
 
-export type End = {
-    ret: string
-}
+export type End = SignedTransactionData
 
 export type SendDataNoDisplay = {
     ret: string
@@ -158,7 +156,14 @@ export type TransferFIOTokensData = {
     max_fee: bigint_like
     tpid: string
     actor: string
+}
 
+export type TransferFIOTokensDataEnc2 = {
+    payee_public_key: string
+    amount: string
+    max_fee: string
+    tpid: string
+    actor: string
 }
 
 /**
@@ -184,6 +189,13 @@ export type Action = {
     data: | TransferFIOTokensData
 }
 
+export type ActionEnc2 = {
+    account: string
+    name: string
+    authorization: Array<ActionAuthorisation>
+    data: | TransferFIOTokensDataEnc2
+}
+
 
 /**
  * Represents transaction to be signed by the device.
@@ -197,5 +209,14 @@ export type Transaction = {
     ref_block_prefix: bigint_like
     context_free_actions: Array<Action>
     actions: Array<Action>
+    transaction_extensions: null
+}
+
+export type TransactionEnc2 = {
+    expiration: string
+    ref_block_num: string
+    ref_block_prefix: string
+    context_free_actions: Array<ActionEnc2>
+    actions: Array<ActionEnc2>
     transaction_extensions: null
 }

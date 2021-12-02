@@ -30,22 +30,10 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
 const uint8_t ALLOWED_HASHES[][32] = {
 	{
-    	0xb2, 0xbe, 0xe6, 0x72, 0x63, 0xb4, 0xad, 0x73,
-    	0x3c, 0x04, 0xca, 0x78, 0xe0, 0x43, 0x6d, 0x06,
-    	0x38, 0xea, 0xf9, 0xe2, 0x92, 0x6e, 0xcf, 0x5f,
-   		0x38, 0x98, 0x78, 0xe0, 0xe8, 0xfe, 0x0f, 0xce
-	},
-	{
-		0xd3, 0xe9, 0x9e, 0x2d, 0xfc, 0x6e, 0x22, 0x82,
-		0x52, 0x41, 0xf4, 0x01, 0x48, 0x3b, 0x96, 0xee,
-		0x74, 0x87, 0x16, 0xd4, 0xef, 0x09, 0xbc, 0x7b,
-		0x36, 0xb2, 0x5a, 0x75, 0x38, 0xa3, 0xbb, 0x2a
-	},
-	{
-		0xec, 0x08, 0x61, 0x57, 0x31, 0x8c, 0x13, 0x40,
-		0xe7, 0xd1, 0xf3, 0xf3, 0x4c, 0xc7, 0x2e, 0xeb,
-		0x36, 0x0d, 0x63, 0x08, 0xe4, 0x48, 0x66, 0x4c,
-		0x11, 0x32, 0xca, 0xe6, 0x1e, 0x21, 0x25, 0x2d
+		0x7a, 0x9e, 0xa7, 0xd9, 0x1a, 0x63, 0xe0, 0xdf,
+		0xd9, 0x23, 0xce, 0xee, 0x7f, 0xd2, 0x0f, 0x5d,
+		0xf4, 0x44, 0x61, 0x32, 0xfa, 0xc0, 0x09, 0xe1,
+		0x07, 0x24, 0xb7, 0x2d, 0x5e, 0xac, 0x79, 0x8a
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
@@ -55,7 +43,8 @@ enum {
 	ENCODING_UINT8,
 	ENCODING_UINT16,
 	ENCODING_UINT32,
-	ENCODING_UINT64
+	ENCODING_UINT64,
+	ENCODING_HEX
 };
 
 // ============================== INIT ==============================
@@ -91,6 +80,7 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 
 		// TRACE("SHA_256_init");
 		sha_256_init(&ctx->txHashContext);
+		TRACE("APPEND CHAIN ID");
 		sha_256_append(&ctx->txHashContext, wireData->chainId, SIZEOF(wireData->chainId));
 
 		uint8_t ins_code[2] = {0x30, 0x01};
@@ -104,45 +94,6 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 
 	signTx_handleInit_ui_runStep();
 }
-
-// ============================ SEND DATA HELPERS ==============================
-// wireDataBuffer format:
-// SIZE_B 			MEANING
-// -------------------------
-// 1 				encoding
-// 1 				header_length
-// header_length	header
-// 1				0 (trailing 0)
-// 1 				body_length
-// body_length 		body
-// 1				0 (trailing 0)
-// void parseSendDataBuffer(uint8_t* wireDataBuffer, size_t wireDataSize, uint8_t* headerLength, uint8_t* bodyLength) {
-// 	struct {
-// 		uint8_t encoding[1];
-// 		uint8_t headerLength[1];
-// 		uint8_t header[NAME_STRING_MAX_LENGTH];
-// 	}* wireData1 = (void*) wireDataBuffer;
-// 	const uint8_t expectedWireData1Length = SIZEOF(*wireData1) - NAME_STRING_MAX_LENGTH + wireData1->headerLength[0] + 1;
-
-// 	struct {
-// 		uint8_t bodyLength[1];
-// 		uint8_t body[MAX_BODY_LENGTH];
-// 	}* wireData2 = ((void*) wireDataBuffer) + expectedWireData1Length;
-// 	const uint8_t expectedWireData2Length = SIZEOF(*wireData2) - MAX_BODY_LENGTH + wireData2->bodyLength[0] + 1;
-
-// 	VALIDATE(expectedWireData1Length + expectedWireData2Length == wireDataSize, ERR_INVALID_DATA);
-// 	str_validateNullTerminatedTextBuffer(wireData1->header, wireData1->headerLength[0]);
-
-// 	str_validateNullTerminatedTextBuffer(wireData2->body, wireData2->bodyLength[0]);
-
-// 	ctx->headerBuf = (char*)wireData1->header;
-// 	ctx->encoding = u1be_read(wireData1->encoding);
-// 	VALIDATE(ctx->encoding == ENCODING_STRING || ctx->encoding == ENCODING_UINT8, ERR_INVALID_DATA);
-// 	ctx->bodyBuf = (char*)wireData2->body; // TODO parse based on encoding in runstep
-
-// 	(*headerLength) = wireData1->headerLength[0];
-// 	(*bodyLength) = wireData2->bodyLength[0];
-// }
 
 // ========================== SEND DATA NO DISPLAY =============================
 
@@ -172,6 +123,12 @@ void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	}* wireData2 = ((void*) wireDataBuffer) + expectedWireData1Length;
 	const uint8_t expectedWireData2Length = SIZEOF(*wireData2) - MAX_BODY_LENGTH + wireData2->bodyLength[0] + 1;
 
+	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+	TRACE_BUFFER(wireData1, expectedWireData1Length);
+	TRACE_BUFFER(wireData2, expectedWireData2Length);
+
+	TRACE("expected length: %d, actual length: %d", expectedWireData1Length + expectedWireData2Length, wireDataSize);
+
 	VALIDATE(expectedWireData1Length + expectedWireData2Length == wireDataSize, ERR_INVALID_DATA);
 	str_validateNullTerminatedTextBuffer(wireData1->header, wireData1->headerLength[0]);
 
@@ -182,11 +139,13 @@ void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	if(ctx->encoding == ENCODING_STRING) {
 		str_validateNullTerminatedTextBuffer(wireData2->body, wireData2->bodyLength[0]);
 	}
-	
-	VALIDATE(ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_UINT64, ERR_INVALID_DATA);
+
+	TRACE("encoding: %d, ENCODING_STRING: %d, ENCODING_HEX: %d", ctx->encoding, ENCODING_STRING, ENCODING_HEX);
+	VALIDATE(ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_HEX, ERR_INVALID_DATA);
 
 	// Set correct body and add to tx
 	// Always add numbers to ctx->uint64Body for displaying it
+	TRACE("APPEND IN SEND DATA NO DISPLAY");
 	switch(ctx->encoding) {
 		case ENCODING_UINT8:
 			ctx->uint8Body = u1be_read((char*)wireData2->body);
@@ -207,6 +166,7 @@ void signTx_handleSendDataNoDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 			ctx->uint64Body = u8be_read((char*)wireData2->body);
 			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint64Body, wireData2->bodyLength[0]);
 			break;
+		case ENCODING_HEX:
 		case ENCODING_STRING:
 			sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
 			break;
@@ -297,10 +257,11 @@ void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 		str_validateNullTerminatedTextBuffer(wireData2->body, wireData2->bodyLength[0]);
 	}
 
-	VALIDATE(ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_UINT64, ERR_INVALID_DATA);
+	VALIDATE(ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_HEX, ERR_INVALID_DATA);
 
 	// Set correct body and add to tx
 	// Always add numbers to ctx->uint64Body for displaying it
+	TRACE("APPEND IN SEND_DATA_DISPLAY");
 	switch(ctx->encoding) {
 		case ENCODING_UINT8:
 			ctx->uint8Body = u1be_read((char*)wireData2->body);
@@ -321,8 +282,10 @@ void signTx_handleSendDataDisplayAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 			ctx->uint64Body = u8be_read((char*)wireData2->body);
 			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint64Body, wireData2->bodyLength[0]);
 			break;
+		case ENCODING_HEX:
 		case ENCODING_STRING:
 			sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
+			break;
 		default:
 			ASSERT(1 < 0);
 			break;
@@ -363,14 +326,13 @@ enum {
 
 static void signTx_handleEnd_ui_runStep()
 {
-	// TRACE("UI step %d", ctx->ui_step);
-	// TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleEnd_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
+	// TODO: ask for confirmation
 	UI_STEP(HANDLE_END_STEP_SUCCESS) {
-		io_send_buf(SUCCESS, G_io_apdu_buffer, 32);
+		io_send_buf(SUCCESS, G_io_apdu_buffer, 65 + 32);
 		ui_displayBusy(); // needs to happen after I/O
 		ui_idle();
 	}
@@ -388,33 +350,44 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
+	explicit_bzero(&ctx->wittnessPath, SIZEOF(ctx->wittnessPath));
+	{
+		// parse
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+		size_t parsedSize = bip44_parseFromWire(&ctx->wittnessPath, wireDataBuffer, wireDataSize);
+		VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
+	}
+
 	{
 		uint8_t ins_code[2] = {0x30, 0x06};
 
 		sha_256_append(&ctx->integrityHashContext, ins_code, SIZEOF(ins_code));
 
+		//Extension points
+		uint8_t epBuf[1];
+		explicit_bzero(epBuf, SIZEOF(epBuf));
+		TRACE("APPEND EXTENSION POINTS");
+		sha_256_append(&ctx->txHashContext, epBuf, SIZEOF(epBuf));
+
 		//We finish the tx hash appending a 32-byte empty buffer
 		uint8_t txHashBuf[32];
 		explicit_bzero(txHashBuf, SIZEOF(txHashBuf));
+		TRACE("APPEND 32 zero bytes to finish");
 		sha_256_append(&ctx->txHashContext, txHashBuf, SIZEOF(txHashBuf));
 
 		//we get the resulting tx hash
 		sha_256_finalize(&ctx->txHashContext, txHashBuf, SIZEOF(txHashBuf));
-		// TRACE("SHA_256_finalize, resulting tx hash:");
-		// TRACE_BUFFER(txHashBuf, 32);
 
 		// We finish the integrity hash appending a 32-byte empty buffer
 		uint8_t integrityHashBuf[32]; // TODO only use 1 buffer for both tx and integrity hash
 		explicit_bzero(integrityHashBuf, SIZEOF(integrityHashBuf));
 		sha_256_append(&ctx->integrityHashContext, integrityHashBuf, SIZEOF(integrityHashBuf));
-		// TRACE("SHA_256_finalize, resulting integrity hash:");
-		// TRACE_BUFFER(integrityHashBuf, 32);
 
-		// We save the tx hash into APDU buffer to return it
-		memcpy(G_io_apdu_buffer, txHashBuf, SIZEOF(txHashBuf));
-
-		// We get the resulting integrity hash and check whether it is in the list of allowed hashes (TODO)
+		// We get the resulting integrity hash and check whether it is in the list of allowed hashes
 		sha_256_finalize(&ctx->integrityHashContext, integrityHashBuf, SIZEOF(integrityHashBuf));
+
+		// // We save the tx hash into APDU buffer to return it
+		memcpy(G_io_apdu_buffer, txHashBuf, SIZEOF(txHashBuf));
 
 		TRACE("Integrity hash:");
 		TRACE_BUFFER(integrityHashBuf, SIZEOF(integrityHashBuf));
@@ -435,6 +408,70 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 			TRACE("Hash ALLOWED :)))");
 		}
 
+		//We derive the private key
+		private_key_t privateKey;
+		derivePrivateKey(&ctx->wittnessPath, &privateKey);
+		TRACE("privateKey.d:");
+		TRACE_BUFFER(privateKey.d, privateKey.d_len);
+
+		//We want to show pubkey, thus we derive it
+		derivePublicKey(&ctx->wittnessPath, &ctx->wittnessPathPubkey);
+		TRACE_BUFFER(ctx->wittnessPathPubkey.W, SIZEOF(ctx->wittnessPathPubkey.W));
+
+		//We sign the hash
+		//Code producing signatures is taken from EOS app
+		uint32_t tx = 0;
+		uint8_t V[33];
+		uint8_t K[32];
+		int tries = 0;
+
+		// Loop until a candidate matching the canonical signature is found
+		// Taken from EOS app
+		// We use G_io_apdu_buffer to save memory (and also to minimize changes to EOS code)
+		// The code produces the signature right where we need it for the respons
+		BEGIN_TRY {
+			TRY {
+				explicit_bzero(G_io_apdu_buffer, SIZEOF(G_io_apdu_buffer));
+				for (;;)
+				{
+					if (tries == 0) {
+						rng_rfc6979(G_io_apdu_buffer + 100, txHashBuf, privateKey.d, privateKey.d_len, SECP256K1_N, 32, V, K);
+					} else {
+						rng_rfc6979(G_io_apdu_buffer + 100, txHashBuf, NULL, 0, SECP256K1_N, 32, V, K);
+					}
+					uint32_t infos;
+					tx = cx_ecdsa_sign(&privateKey, CX_NO_CANONICAL | CX_RND_PROVIDED | CX_LAST, CX_SHA256,
+									txHashBuf, 32,
+									G_io_apdu_buffer + 100, 100,
+									&infos);
+					TRACE_BUFFER(G_io_apdu_buffer + 100, 100);
+
+					if ((infos & CX_ECCINFO_PARITY_ODD) != 0) {
+						G_io_apdu_buffer[100] |= 0x01;
+					}
+					G_io_apdu_buffer[0] = 27 + 4 + (G_io_apdu_buffer[100] & 0x01);
+					ecdsa_der_to_sig(G_io_apdu_buffer + 100, G_io_apdu_buffer + 1);
+					TRACE_BUFFER(G_io_apdu_buffer, 65);
+
+					if (check_canonical(G_io_apdu_buffer + 1)) {
+						tx = 1 + 64;
+						break;
+					} else {
+						TRACE("Try %d unsuccesfull! We will not get correct signature!!!!!!!!!!!!!!!!!!!!!!!!!", tries);
+						tries++;
+					}
+				}
+			}
+			FINALLY {
+				memset(&privateKey, 0, sizeof(privateKey));
+			}
+		}
+		END_TRY;
+
+		//We add hash to the response
+		TRACE("ecdsa_der_to_sig_result:");
+		TRACE_BUFFER(G_io_apdu_buffer, 65);
+		memcpy(G_io_apdu_buffer + 65, txHashBuf, 32);
 	}
 
 	signTx_handleEnd_ui_runStep();
@@ -483,3 +520,4 @@ void signTransaction_handleAPDU(
 	VALIDATE(subhandler != NULL, ERR_INVALID_REQUEST_PARAMETERS);
 	subhandler(p2, wireDataBuffer, wireDataSize);
 }
+

@@ -214,35 +214,36 @@ export class Fio {
         return yield* getSerial(version)
     }
 
-    async initHash(): Promise<InitHashResponse> {
-        return interact(this._initHash(), this._send)
+    async initHash(chainId: HexString): Promise<InitHashResponse> {
+        return interact(this._initHash(chainId), this._send)
     }
 
-    * _initHash(): Interaction<InitHashResponse> {
-        return yield* initHash()
+    * _initHash(chainId: HexString): Interaction<InitHashResponse> {
+        return yield* initHash(chainId);
     }
 
-    async endHash(): Promise<EndHashResponse> {
-        return interact(this._endHash(), this._send)
+    async endHash(path: BIP32Path): Promise<EndHashResponse> {
+        const parsedPath = parseBIP32Path(path, InvalidDataReason.INVALID_PATH)
+        return interact(this._endHash(parsedPath), this._send)
     }
 
-    * _endHash(): Interaction<EndHashResponse> {
-        return yield* endHash()
+    * _endHash(parsedPath: ValidBIP32Path): Interaction<EndHashResponse> {
+        return yield* endHash(parsedPath)
     }
 
-    async sendDataNoDisplay(header: String, body: String, encoding: number): Promise<SendDataNoDisplayResponse> {
+    async sendDataNoDisplay(header: string, body: string, encoding: number): Promise<SendDataNoDisplayResponse> {
         return interact(this._sendDataNoDisplay(header, body, encoding), this._send);
     }
 
-    *_sendDataNoDisplay(header: String, body: String, encoding: number): Interaction<SendDataNoDisplayResponse> {
+    *_sendDataNoDisplay(header: string, body: string, encoding: number): Interaction<SendDataNoDisplayResponse> {
         return yield* sendDataNoDisplay(header, body, encoding)
     }
 
-    async sendDataDisplay(header: String, body: String, encoding: number): Promise<SendDataDisplayResponse> {
+    async sendDataDisplay(header: string, body: string, encoding: number): Promise<SendDataDisplayResponse> {
         return interact(this._sendDataDisplay(header, body, encoding), this._send);
     }
 
-    *_sendDataDisplay(header: String, body: String, encoding: number): Interaction<SendDataDisplayResponse> {
+    *_sendDataDisplay(header: string, body: string, encoding: number): Interaction<SendDataDisplayResponse> {
         return yield* sendDataDisplay(header, body, encoding);
     }
 
