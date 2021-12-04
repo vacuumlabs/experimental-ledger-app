@@ -6,7 +6,7 @@ import {assert} from "utils/assert"
 
 import type {Fio} from "../../src/fio"
 import {DeviceStatusError, HARDENED} from "../../src/fio"
-import type {Transaction, TransactionEnc2} from "../../src/types/public"
+import type {Transaction} from "../../src/types/public"
 import {hex_to_buf, uint64_to_buf} from "../../src/utils/serialize"
 import {getFio} from "../test_utils"
 import {
@@ -113,8 +113,8 @@ async function buildTxAndSignatureFioJs(network: string, tx: Transaction, pubkey
 
 const basicTx: Transaction = {
     expiration: "2021-08-28T12:50:36.686",
-    ref_block_num: 0x1122,
-    ref_block_prefix: 0x33445566,
+    ref_block_num: "4386",
+    ref_block_prefix: "860116326",
     context_free_actions: [],
     actions: [{
         account: "fio.token",
@@ -126,7 +126,7 @@ const basicTx: Transaction = {
         data: {
             payee_public_key: "FIO8PRe4WRZJj5mkem6qVGKyvNFgPsNnjNN6kPhh6EaCpzCVin5Jj",
             amount: "20",
-            max_fee: 0x11223344,
+            max_fee: "287454020",
             tpid: "rewards@wallet",
             actor: "aftyershcu22",
         },
@@ -189,35 +189,12 @@ describe("signTransaction", async () => {
     it("Sign testnet transaction", async () => {
         const network = "TESTNET"
 
-        // Lets sign the transaction with ledger
-        const chainId = networkInfo[network].chainId
-        // const ledgerResponse = await fio.signTransaction({path, chainId, tx})
-        const basicTx: TransactionEnc2 = {
-            expiration: "2021-08-28T12:50:36.686",
-            ref_block_num: "4386",
-            ref_block_prefix: "860116326",
-            context_free_actions: [],
-            actions: [{
-                account: "fio.token",
-                name: "trnsfiopubky",
-                authorization: [{
-                    actor: "aftyershcu22",
-                    permission: "active",
-                }],
-                data: {
-                    payee_public_key: "FIO8PRe4WRZJj5mkem6qVGKyvNFgPsNnjNN6kPhh6EaCpzCVin5Jj",
-                    amount: "20",
-                    max_fee: "287454020",
-                    tpid: "rewards@wallet",
-                    actor: "aftyershcu22",
-                },
-            }],
-            transaction_extensions: null,
-        }
         const tx = basicTx
          // Lets sign the transaction with fiojs
         const {serializedTx, fullMsg, hash, signature} = await buildTxAndSignatureFioJs(network, tx, publicKey)
 
+        // Lets sign the transaction with ledger
+        const chainId = networkInfo[network].chainId
         // Send data to sign the tx
         await fio.initHash(chainId);
         await fio.sendData('expiration', basicTx['expiration'], ENCODING_DATETIME);
@@ -265,22 +242,57 @@ describe("signTransaction", async () => {
         
     // })
 
-    // it("Sign mainnet transaction", async () => {
-    //     const network = "MAINNET"
-    //     const tx = basicTx
+    it("Sign mainnet transaction", async () => {
+        const network = "MAINNET"
+        const tx = basicTx
 
-    //     // Lets sign the transaction with fiojs
-    //     const {serializedTx, fullMsg, hash, signature} = await buildTxAndSignatureFioJs(network, tx, otherPublicKey)
+        // Lets sign the transaction with fiojs
+        const {serializedTx, fullMsg, hash, signature} = await buildTxAndSignatureFioJs(network, tx, publicKey)
 
-    //     // Lets sign the transaction with ledger
-    //     const chainId = networkInfo[network].chainId
-    //     const ledgerResponse = await fio.signTransaction({path: otherPath, chainId, tx})
-    //     const signatureLedger = Signature.fromHex(ledgerResponse.witness.witnessSignatureHex)
+        // Lets sign the transaction with ledger
+        const chainId = networkInfo[network].chainId
+        // Send data to sign the tx
+        await fio.initHash(chainId);
+        await fio.sendData('expiration', basicTx['expiration'], ENCODING_DATETIME);
+        await fio.sendData('ref_block_num', basicTx['ref_block_num'], ENCODING_UINT16);
+        await fio.sendData('ref_block_prefix', basicTx['ref_block_prefix'], ENCODING_UINT32);
+        await fio.sendData('mx_net_words', '0', ENCODING_UINT8);
+        await fio.sendData('mx_cpu_ms', '0', ENCODING_UINT8);
+        await fio.sendData('delay_sec', '0', ENCODING_UINT8);
+        await fio.sendData('cf_act_amt', basicTx['context_free_actions'].length.toString(), ENCODING_UINT8);
+        await fio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8);
+        await fio.sendData(
+            "contract_account_name",
+            parseContractAccountName(chainId, basicTx['actions'][0]['account'], basicTx['actions'][0]['name'], InvalidDataReason.ACTION_NOT_SUPPORTED),
+            ENCODING_HEX
+        );
+        await fio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8);
+        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['authorization'][0]['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
+        await fio.sendData('permission', parseNameString(basicTx['actions'][0]['authorization'][0]['permission'], InvalidDataReason.INVALID_PERMISSION), ENCODING_HEX);
 
-    //     expect(ledgerResponse.txHashHex).to.be.equal(hash)
-    //     expect(signatureLedger.verify(fullMsg, otherPublicKey)).to.be.true
-    //     expect(signatureLedger.verify(fullMsg, publicKey)).to.be.false
-    // })
+        // Data length
+        const SIMPLE_LENGTH_VARIABLE_LENGTH = 1;
+        const AMOUNT_TYPE_LENGTH = 8;
+        const NAME_VARIABLE_LENGTH = 8;
+        let dataLength = SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['payee_public_key'].length + // pubkey_length, pubkey
+                        2 * AMOUNT_TYPE_LENGTH + NAME_VARIABLE_LENGTH + // amount, max_fee, actor
+                        + SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['tpid'].length; // tpid_length, tpid
+        await fio.sendData('data_len', dataLength.toString(), ENCODING_UINT8);
+        await fio.sendData('pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8);
+        await fio.sendData('pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, true);
+        await fio.sendData('amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, true);
+        await fio.sendData('max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, true);
+        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
+        await fio.sendData('tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8);
+        await fio.sendData('tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING);
+        const ledgerResponse = await fio.endHash(path);
+
+        const signatureLedger = Signature.fromHex(ledgerResponse.witness.witnessSignatureHex)
+
+        expect(ledgerResponse.txHashHex).to.be.equal(hash)
+        expect(signatureLedger.verify(fullMsg, publicKey)).to.be.true
+        expect(signatureLedger.verify(fullMsg, otherPublicKey)).to.be.false
+    })
 
     // it("Invalid transaction: actor dont match", async () => {
     //     const network = "MAINNET"
@@ -289,7 +301,42 @@ describe("signTransaction", async () => {
 
     //     // Lets sign the transaction with ledger
     //     const chainId = networkInfo[network].chainId
-    //     const promise = fio.signTransaction({path, chainId, tx})
+    //     // Send data to sign the tx
+    //     await fio.initHash(chainId);
+    //     await fio.sendData('expiration', basicTx['expiration'], ENCODING_DATETIME);
+    //     await fio.sendData('ref_block_num', basicTx['ref_block_num'], ENCODING_UINT16);
+    //     await fio.sendData('ref_block_prefix', basicTx['ref_block_prefix'], ENCODING_UINT32);
+    //     await fio.sendData('mx_net_words', '0', ENCODING_UINT8);
+    //     await fio.sendData('mx_cpu_ms', '0', ENCODING_UINT8);
+    //     await fio.sendData('delay_sec', '0', ENCODING_UINT8);
+    //     await fio.sendData('cf_act_amt', basicTx['context_free_actions'].length.toString(), ENCODING_UINT8);
+    //     await fio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8);
+    //     await fio.sendData(
+    //         "contract_account_name",
+    //         parseContractAccountName(chainId, basicTx['actions'][0]['account'], basicTx['actions'][0]['name'], InvalidDataReason.ACTION_NOT_SUPPORTED),
+    //         ENCODING_HEX
+    //     );
+    //     await fio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8);
+    //     await fio.sendData('actor', parseNameString(basicTx['actions'][0]['authorization'][0]['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
+    //     await fio.sendData('permission', parseNameString(basicTx['actions'][0]['authorization'][0]['permission'], InvalidDataReason.INVALID_PERMISSION), ENCODING_HEX);
+
+    //     // Data length
+    //     const SIMPLE_LENGTH_VARIABLE_LENGTH = 1;
+    //     const AMOUNT_TYPE_LENGTH = 8;
+    //     const NAME_VARIABLE_LENGTH = 8;
+    //     let dataLength = SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['payee_public_key'].length + // pubkey_length, pubkey
+    //                     2 * AMOUNT_TYPE_LENGTH + NAME_VARIABLE_LENGTH + // amount, max_fee, actor
+    //                     + SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['tpid'].length; // tpid_length, tpid
+    //     await fio.sendData('data_len', dataLength.toString(), ENCODING_UINT8);
+    //     await fio.sendData('pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8);
+    //     await fio.sendData('pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, true);
+    //     await fio.sendData('amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, true);
+    //     await fio.sendData('max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, true);
+    //     await fio.sendData('actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
+    //     await fio.sendData('tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8);
+    //     await fio.sendData('tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING);
+    //     const promise = await fio.endHash(path);
+
     //     await expect(promise).to.be.rejected
     // })
 

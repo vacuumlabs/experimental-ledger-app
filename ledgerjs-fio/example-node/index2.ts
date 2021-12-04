@@ -10,7 +10,7 @@ import {
   parseNameString,
   parseContractAccountName
 } from "../src/utils/parse";
-import { Fio, HARDENED, GetPublicKeyRequest, SignTransactionRequest, TransactionEnc2 } from "../src/fio";
+import { Fio, HARDENED, GetPublicKeyRequest, SignTransactionRequest, Transaction } from "../src/fio";
 import {InvalidDataReason} from "../src/errors/invalidDataReason"
 
 const path = [44 + HARDENED, 235 + HARDENED, 0 + HARDENED, 0, 0]
@@ -44,7 +44,7 @@ async function example() {
   // wait()
   console.log("\n".repeat(3));
 
-  const basicTx: TransactionEnc2 = {
+  const basicTx: Transaction = {
       expiration: "2021-08-28T12:50:36.686",
       ref_block_num: "4386",
       ref_block_prefix: "860116326",
