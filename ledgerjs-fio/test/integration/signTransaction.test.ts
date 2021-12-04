@@ -205,14 +205,16 @@ describe("signTransaction", async () => {
         await fio.sendData('delay_sec', '0', ENCODING_UINT8);
         await fio.sendData('cf_act_amt', basicTx['context_free_actions'].length.toString(), ENCODING_UINT8);
         await fio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8);
+        await fio.initAction(0, 127);
         await fio.sendData(
             "contract_account_name",
             parseContractAccountName(chainId, basicTx['actions'][0]['account'], basicTx['actions'][0]['name'], InvalidDataReason.ACTION_NOT_SUPPORTED),
-            ENCODING_HEX
+            ENCODING_HEX,
+            0
         );
-        await fio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8);
-        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['authorization'][0]['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
-        await fio.sendData('permission', parseNameString(basicTx['actions'][0]['authorization'][0]['permission'], InvalidDataReason.INVALID_PERMISSION), ENCODING_HEX);
+        await fio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['authorization'][0]['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX, 0);
+        await fio.sendData('permission', parseNameString(basicTx['actions'][0]['authorization'][0]['permission'], InvalidDataReason.INVALID_PERMISSION), ENCODING_HEX, 0);
 
         // Data length
         const SIMPLE_LENGTH_VARIABLE_LENGTH = 1;
@@ -221,14 +223,15 @@ describe("signTransaction", async () => {
         let dataLength = SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['payee_public_key'].length + // pubkey_length, pubkey
                         2 * AMOUNT_TYPE_LENGTH + NAME_VARIABLE_LENGTH + // amount, max_fee, actor
                         + SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['tpid'].length; // tpid_length, tpid
-        await fio.sendData('data_len', dataLength.toString(), ENCODING_UINT8);
-        await fio.sendData('pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8);
-        await fio.sendData('pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, true);
-        await fio.sendData('amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, true);
-        await fio.sendData('max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, true);
-        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
-        await fio.sendData('tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8);
-        await fio.sendData('tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING);
+        await fio.sendData('data_len', dataLength.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, 0, true);
+        await fio.sendData('amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, 0, true);
+        await fio.sendData('max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, 0, true);
+        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX, 0);
+        await fio.sendData('tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING, 0);
+        await fio.endAction(0);
         const ledgerResponse = await fio.endHash(path);
 
         const signatureLedger = Signature.fromHex(ledgerResponse.witness.witnessSignatureHex)
@@ -261,14 +264,16 @@ describe("signTransaction", async () => {
         await fio.sendData('delay_sec', '0', ENCODING_UINT8);
         await fio.sendData('cf_act_amt', basicTx['context_free_actions'].length.toString(), ENCODING_UINT8);
         await fio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8);
+        await fio.initAction(0, 127);
         await fio.sendData(
             "contract_account_name",
             parseContractAccountName(chainId, basicTx['actions'][0]['account'], basicTx['actions'][0]['name'], InvalidDataReason.ACTION_NOT_SUPPORTED),
-            ENCODING_HEX
+            ENCODING_HEX,
+            0
         );
-        await fio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8);
-        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['authorization'][0]['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
-        await fio.sendData('permission', parseNameString(basicTx['actions'][0]['authorization'][0]['permission'], InvalidDataReason.INVALID_PERMISSION), ENCODING_HEX);
+        await fio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['authorization'][0]['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX, 0);
+        await fio.sendData('permission', parseNameString(basicTx['actions'][0]['authorization'][0]['permission'], InvalidDataReason.INVALID_PERMISSION), ENCODING_HEX, 0);
 
         // Data length
         const SIMPLE_LENGTH_VARIABLE_LENGTH = 1;
@@ -277,14 +282,15 @@ describe("signTransaction", async () => {
         let dataLength = SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['payee_public_key'].length + // pubkey_length, pubkey
                         2 * AMOUNT_TYPE_LENGTH + NAME_VARIABLE_LENGTH + // amount, max_fee, actor
                         + SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['tpid'].length; // tpid_length, tpid
-        await fio.sendData('data_len', dataLength.toString(), ENCODING_UINT8);
-        await fio.sendData('pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8);
-        await fio.sendData('pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, true);
-        await fio.sendData('amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, true);
-        await fio.sendData('max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, true);
-        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX);
-        await fio.sendData('tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8);
-        await fio.sendData('tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING);
+        await fio.sendData('data_len', dataLength.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, 0, true);
+        await fio.sendData('amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, 0, true);
+        await fio.sendData('max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, 0, true);
+        await fio.sendData('actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX, 0);
+        await fio.sendData('tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8, 0);
+        await fio.sendData('tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING, 0);
+        await fio.endAction(0);
         const ledgerResponse = await fio.endHash(path);
 
         const signatureLedger = Signature.fromHex(ledgerResponse.witness.witnessSignatureHex)

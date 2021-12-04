@@ -58,6 +58,9 @@ enum {
 	// cbor
 	ERR_UNEXPECTED_TOKEN      = 0x4720,
 
+	// Invalid integrity hash
+	ERR_HASH_NOT_ALLOWED	  = 0x4800
+
 };
 
 #endif // H_FIO_APP_ERRORS

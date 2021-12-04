@@ -27,6 +27,8 @@ import {signTransaction} from "./interactions/signTransaction"
 import {initHash} from "./interactions/initHash"
 import {endHash} from "./interactions/endHash"
 import {sendData} from "./interactions/sendData"
+import {initAction} from "./interactions/initAction"
+import {endAction} from "./interactions/endAction"
 import type {
     HexString,
     ParsedAction,
@@ -37,13 +39,14 @@ import type {
 } from './types/internal'
 import type {
     Action, ActionAuthorisation, BIP32Path, DeviceCompatibility, PublicKey,
-    Serial, Init, End, SendData, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
+    Serial, Init, End, InitAction, EndAction, SendData, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
 } from './types/public'
 import utils from "./utils"
 import {assert} from './utils/assert'
 import {
     isHexString,
     isValidPath,
+    NO_REGISTER,
     parseAuthorization,
     parseBIP32Path,
     parseContractAccountName,
@@ -230,12 +233,28 @@ export class Fio {
         return yield* endHash(parsedPath)
     }
 
-    async sendData(header: string, body: string, encoding: number, display: boolean = false): Promise<SendDataResponse> {
-        return interact(this._sendData(header, body, encoding, display), this._send);
+    async initAction(registerIdx: number, actionLength: number): Promise<InitActionResponse> {
+        return interact(this._initAction(registerIdx, actionLength), this._send);
     }
 
-    *_sendData(header: string, body: string, encoding: number, display: boolean = false): Interaction<SendDataResponse> {
-        return yield* sendData(header, body, encoding, display);
+    * _initAction(registerIdx: number, actionLength: number): Interaction<InitActionResponse> {
+        return yield* initAction(registerIdx, actionLength);
+    }
+
+    async endAction(registerIdx: number): Promise<EndActionResponse> {
+        return interact(this._endAction(registerIdx), this._send);
+    }
+
+    * _endAction(registerIdx: number): Interaction<EndActionResponse> {
+        return yield* endAction(registerIdx);
+    }
+
+    async sendData(header: string, body: string, encoding: number, registerIdx: number = NO_REGISTER, display: boolean = false): Promise<SendDataResponse> {
+        return interact(this._sendData(header, body, encoding, registerIdx, display), this._send);
+    }
+
+    *_sendData(header: string, body: string, encoding: number, registerIdx: number = NO_REGISTER, display: boolean = false): Interaction<SendDataResponse> {
+        return yield* sendData(header, body, encoding, registerIdx, display);
     }
 
     /**
@@ -327,6 +346,10 @@ export type GetSerialResponse = Serial
 export type InitHashResponse = Init
 
 export type EndHashResponse = End
+
+export type InitActionResponse = InitAction
+
+export type EndActionResponse = EndAction
 
 export type SendDataResponse = SendData
 

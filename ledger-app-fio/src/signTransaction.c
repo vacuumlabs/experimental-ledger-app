@@ -11,6 +11,7 @@
 #include "uiScreens.h"
 #include "textUtils.h"
 
+
 static ins_sign_transaction_context_t* ctx = &(instructionState.signTransactionContext);
 
 
@@ -30,10 +31,10 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 
 const uint8_t ALLOWED_HASHES[][32] = {
 	{
-		0xf5, 0xdd, 0xdf, 0x66, 0x30, 0xfe, 0x2f, 0x1c,
-		0x8f, 0xd7, 0xe3, 0xfb, 0x25, 0x1c, 0xde, 0x9a,
-		0xb9, 0x22, 0x10, 0xc9, 0x24, 0x96, 0xb6, 0x10,
-		0xe2, 0xf5, 0xf9, 0xef, 0x96, 0x96, 0x9e, 0x6a
+		0x7a, 0xa5, 0x20, 0x07, 0x0f, 0xec, 0x40, 0x97,
+		0xe8, 0x0c, 0x2e, 0x66, 0x41, 0xa7, 0x7c, 0x77,
+		0x25, 0xba, 0xb4, 0x4d, 0x38, 0x55, 0x95, 0x19,
+		0xef, 0x35, 0x12, 0xfc, 0x39, 0x1a, 0xfd, 0xf5
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
@@ -53,7 +54,7 @@ enum {
 	HANDLE_INIT_STEP_DISPLAY_DETAILS = 100,
 	HANDLE_INIT_STEP_RESPOND,
 	HANDLE_INIT_STEP_INVALID,
-} ;
+};
 
 static void signTx_handleInit_ui_runStep()
 {
@@ -80,19 +81,99 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 		sha_256_init(&ctx->txHashContext);
 		sha_256_append(&ctx->txHashContext, wireData->chainId, SIZEOF(wireData->chainId));
 
-		uint8_t ins_code[2] = {0x30, 0x01};
+		uint8_t constants[] = {0x30, 0x01, SIZEOF(wireData->chainId)};
 
 		sha_256_init(&ctx->integrityHashContext);
-		sha_256_append(&ctx->integrityHashContext, ins_code, SIZEOF(ins_code));
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 
 		ctx->network = getNetworkByChainId(wireData->chainId, SIZEOF(wireData->chainId));
+
+		ctx->currRegisterIdx = NO_REGISTER;
 	}
 
 	signTx_handleInit_ui_runStep();
 }
 
+// ========================= INIT ACTION ============================
+
+static void signTx_handleInitAction_ui_runStep()
+{
+	respondSuccessEmptyMsg();
+}
+
+__noinline_due_to_stack__
+void signTx_handleInitActionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+
+	{
+		struct {
+			uint8_t registerIdx[1];
+			uint8_t actionLength[9]; // 0-terminated
+		}* wireData = (void*) wireDataBuffer;
+
+		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
+		
+		VALIDATE(wireData->registerIdx[0] != NO_REGISTER, ERR_INVALID_DATA);
+		VALIDATE(0 <= wireData->registerIdx[0] && wireData->registerIdx[0] < NUM_REGISTERS, ERR_INVALID_DATA);
+		VALIDATE(ctx->registers[wireData->registerIdx[0]] == 0, ERR_INVALID_DATA);
+
+		ctx->currRegisterIdx = wireData->registerIdx[0];
+
+		uint64_t parsedActionLength = (uint32_t)u8be_read(wireData->actionLength);
+		ctx->registers[ctx->currRegisterIdx] = parsedActionLength;
+
+		uint8_t constants[] = {0x30, 0x09};
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, wireData->actionLength, SIZEOF(wireData->actionLength));
+	}
+
+	signTx_handleInitAction_ui_runStep();
+}
+
+// ========================= END ACTION ============================
+
+static void signTx_handleEndAction_ui_runStep()
+{
+	respondSuccessEmptyMsg();
+}
+
+__noinline_due_to_stack__
+void signTx_handleEndActionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+
+	{
+		struct {
+			uint8_t registerIdx[1];
+		}* wireData = (void*) wireDataBuffer;
+
+		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
+
+		VALIDATE(wireData->registerIdx[0] == ctx->currRegisterIdx, ERR_INVALID_DATA);
+		VALIDATE(ctx->currRegisterIdx != NO_REGISTER, ERR_ASSERT);
+		VALIDATE(0 <= ctx->currRegisterIdx && ctx->currRegisterIdx < NUM_REGISTERS, ERR_INVALID_DATA);
+		VALIDATE(ctx->registers[ctx->currRegisterIdx] == 0, ERR_ASSERT);
+
+		uint8_t constants[] = {0x30, 0x0a};
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+
+		ctx->currRegisterIdx = NO_REGISTER;
+	}
+
+	signTx_handleEndAction_ui_runStep();
+}
+
 // ========================== SEND DATA =============================
-DISPLAY
+
 enum {
 	HANDLE_SEND_DATA_DISPLAY = 500,
 	HANDLE_SEND_DATA_RESPOND,
@@ -110,6 +191,8 @@ static void signTx_handleSendData_ui_runStep()
 			ui_displayPaginatedText(ctx->headerBuf, ctx->bodyBuf, this_fn);
 		} else if(ENCODING_UINT8 <= ctx->encoding && ctx->encoding <= ENCODING_UINT64) {
 			ui_displayUint64Screen(ctx->headerBuf, ctx->uint64Body, this_fn);
+		} else if(ctx->encoding == ENCODING_HEX) {
+			ui_displayHexBufferScreen(ctx->headerBuf, ctx->bodyBuf, sizeof(ctx->bodyBuf) , this_fn); // TODO test this
 		} else {
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -122,10 +205,22 @@ static void signTx_handleSendData_ui_runStep()
 	UI_STEP_END(HANDLE_SEND_DATA_INVALID);
 }
 
+// wireDataBuffer format:
+// SIZE_B 			MEANING
+// -------------------------
+// 1 				register_index -- decrement this register by body_length
+// 1 				encoding
+// 1 				header_length
+// header_length	header
+// 1				0 (trailing 0)
+// 1 				body_length
+// body_length 		body
+// 1				0 (trailing 0)
 __noinline_due_to_stack__
 void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	struct {
+		uint8_t registerIdx[1];
 		uint8_t encoding[1];
 		uint8_t headerLength[1];
 		uint8_t header[NAME_STRING_MAX_LENGTH];
@@ -141,6 +236,20 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 	VALIDATE(expectedWireData1Length + expectedWireData2Length == wireDataSize, ERR_INVALID_DATA);
 	str_validateNullTerminatedTextBuffer(wireData1->header, wireData1->headerLength[0]);
 
+	VALIDATE(wireData1->registerIdx[0] == ctx->currRegisterIdx, ERR_INVALID_DATA);
+
+	if(ctx->currRegisterIdx == NO_REGISTER) {
+		uint8_t noRegisterBuf[] = {0};
+		sha_256_append(&ctx->integrityHashContext, noRegisterBuf, SIZEOF(noRegisterBuf));
+	} else {
+		uint8_t registerExistsBuf[] = {1};
+		sha_256_append(&ctx->integrityHashContext, registerExistsBuf, SIZEOF(registerExistsBuf));
+		VALIDATE(0 <= ctx->currRegisterIdx && ctx->currRegisterIdx < NUM_REGISTERS, ERR_INVALID_DATA);
+		VALIDATE(wireData2->bodyLength[0] <= ctx->registers[ctx->currRegisterIdx], ERR_INVALID_DATA);
+		ctx->registers[ctx->currRegisterIdx] -= wireData2->bodyLength[0];
+		VALIDATE(ctx->registers[ctx->currRegisterIdx] >= 0, ERR_INVALID_DATA);
+	}
+
 	ctx->headerBuf = (char*)wireData1->header;
 	ctx->encoding = u1be_read(wireData1->encoding);
 	ctx->bodyBuf = (char*)wireData2->body;
@@ -155,22 +264,22 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 	// Always add numbers to ctx->uint64Body for displaying it
 	switch(ctx->encoding) {
 		case ENCODING_UINT8:
-			ctx->uint8Body = u1be_read((char*)wireData2->body);
+			ctx->uint8Body = u1be_read(wireData2->body);
 			ctx->uint64Body = (uint64_t)ctx->uint8Body;
 			sha_256_append(&ctx->txHashContext, &ctx->uint8Body, wireData2->bodyLength[0]);
 			break;
 		case ENCODING_UINT16:
-			ctx->uint16Body = u2be_read((char*)wireData2->body);
+			ctx->uint16Body = u2be_read(wireData2->body);
 			ctx->uint64Body = (uint64_t)ctx->uint16Body;
 			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint16Body, wireData2->bodyLength[0]);
 			break;
 		case ENCODING_UINT32:
-			ctx->uint32Body = u4be_read((char*)wireData2->body);
+			ctx->uint32Body = u4be_read(wireData2->body);
 			ctx->uint64Body = (uint64_t)ctx->uint32Body;
 			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint32Body, wireData2->bodyLength[0]);
 			break;
 		case ENCODING_UINT64:
-			ctx->uint64Body = u8be_read((char*)wireData2->body);
+			ctx->uint64Body = u8be_read(wireData2->body);
 			sha_256_append(&ctx->txHashContext, (uint8_t*)&ctx->uint64Body, wireData2->bodyLength[0]);
 			break;
 		case ENCODING_HEX:
@@ -178,7 +287,7 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 			sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
 			break;
 		default:
-			ASSERT(1 < 0);
+			THROW(ERR_NOT_IMPLEMENTED);
 			break;
 	}
 
@@ -247,9 +356,9 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 	}
 
 	{
-		uint8_t ins_code[2] = {0x30, 0x06};
+		uint8_t constants[] = {0x30, 0x06, wireDataSize};
 
-		sha_256_append(&ctx->integrityHashContext, ins_code, SIZEOF(ins_code));
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 
 		//Extension points
 		uint8_t epBuf[1];
@@ -289,6 +398,7 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 
 		if(ctx->ui_step == HANDLE_END_STEP_HASH_NOT_ALLOWED) {
 			TRACE("Hash NOT ALLOWED!!!");
+			THROW(ERR_HASH_NOT_ALLOWED);
 		}
 		else {
 			TRACE("Hash ALLOWED :)))");
@@ -376,6 +486,8 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x01, signTx_handleInitAPDU);
 		CASE(0x06, signTx_handleEndAPDU);
 		CASE(0x07, signTx_handleSendDataAPDU);
+		CASE(0x09, signTx_handleInitActionAPDU);
+		CASE(0x0a, signTx_handleEndActionAPDU);
 		DEFAULT(NULL)
 #	undef   CASE
 #	undef   DEFAULT

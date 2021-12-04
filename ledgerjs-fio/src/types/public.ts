@@ -79,6 +79,14 @@ export type Init = {
 
 export type End = SignedTransactionData
 
+export type InitAction = {
+    ret: string
+}
+
+export type EndAction = {
+    ret: string
+}
+
 export type SendData= {
     ret: string
 }

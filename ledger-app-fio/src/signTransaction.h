@@ -53,6 +53,9 @@ typedef struct {
 	uint64_t uint64Body;
 	uint8_t encoding;
 
+	uint8_t currRegisterIdx;
+	uint64_t registers[NUM_REGISTERS];
+
 } ins_sign_transaction_context_t;
 
 #endif // H_FIO_APP_SIGN_TRANSACTION

@@ -11,7 +11,8 @@ import {
     ENCODING_UINT32,
     ENCODING_UINT64,
     ENCODING_DATETIME,
-    ENCODING_HEX
+    ENCODING_HEX,
+    NO_REGISTER
 } from "../utils/parse"
 
 const send = (params: {
@@ -21,7 +22,7 @@ const send = (params: {
     expectedResponseLength?: number
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
 
-export function* sendData(header: string, body: string, encoding: number, display: boolean = false): Interaction<SendData> {
+export function* sendData(header: string, body: string, encoding: number, registerIdx: number = NO_REGISTER, display: boolean = false): Interaction<SendData> {
     const P1_UNUSED = 0x00
     const P2_UNUSED = 0x00
     let headerLen = header.length
@@ -29,6 +30,7 @@ export function* sendData(header: string, body: string, encoding: number, displa
     let buf = null
     if(encoding == ENCODING_STRING) {
         buf = Buffer.concat([
+            uint8_to_buf(registerIdx as Uint8_t),
             uint8_to_buf(encoding as Uint8_t),
             uint8_to_buf(headerLen as Uint8_t),
             Buffer.from(header),
@@ -39,6 +41,7 @@ export function* sendData(header: string, body: string, encoding: number, displa
         ])
     } else if(encoding == ENCODING_DATETIME) {
         buf = Buffer.concat([
+            uint8_to_buf(registerIdx as Uint8_t),
             uint8_to_buf(ENCODING_UINT32 as Uint8_t), // Datetime is just a 4 byte integer
             uint8_to_buf(headerLen as Uint8_t),
             Buffer.from(header),
@@ -50,6 +53,7 @@ export function* sendData(header: string, body: string, encoding: number, displa
     } else if(encoding == ENCODING_HEX) {
         let hexBodyBuf = Buffer.from(body, "hex");
         buf = Buffer.concat([
+            uint8_to_buf(registerIdx as Uint8_t),
             uint8_to_buf(encoding as Uint8_t),
             uint8_to_buf(headerLen as Uint8_t),
             Buffer.from(header),
@@ -60,6 +64,7 @@ export function* sendData(header: string, body: string, encoding: number, displa
         ])
     } else {
         let commonAttrsPrefix = [
+            uint8_to_buf(registerIdx as Uint8_t),
             uint8_to_buf(encoding as Uint8_t),
             uint8_to_buf(headerLen as Uint8_t),
             Buffer.from(header),
