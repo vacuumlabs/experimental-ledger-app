@@ -300,6 +300,7 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 
 	security_policy_t policy = policyForSendData(p2);
 	ENSURE_NOT_DENIED(policy);
+
 	{
 		// select UI steps
 		switch (policy) {
@@ -318,7 +319,8 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 // =============================== END ==================================
 
 enum {
-	HANDLE_END_STEP_SUCCESS = 400,
+	HANDLE_END_STEP_CONFIRM = 400,
+	HANDLE_END_STEP_RESPOND,
 	HANDLE_END_STEP_HASH_NOT_ALLOWED,
 } ;
 
@@ -329,8 +331,16 @@ static void signTx_handleEnd_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	// TODO: ask for confirmation
-	UI_STEP(HANDLE_END_STEP_SUCCESS) {
+	UI_STEP(HANDLE_END_STEP_CONFIRM) {
+		ui_displayPrompt(
+		        "Sign",
+		        "transaction?",
+		        this_fn,
+		        respond_with_user_reject
+		);
+	}
+
+	UI_STEP(HANDLE_END_STEP_RESPOND) {
 		io_send_buf(SUCCESS, G_io_apdu_buffer, 65 + 32);
 		ui_displayBusy(); // needs to happen after I/O
 		ui_idle();
@@ -391,17 +401,17 @@ void signTx_handleEndAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSi
 		ctx->ui_step = HANDLE_END_STEP_HASH_NOT_ALLOWED;
 		for(uint8_t i = 0; i < NUM_ALLOWED_HASHES; i++) {
 			if(memcmp(integrityHashBuf, ALLOWED_HASHES[i], 32) == 0) {
-					ctx->ui_step = HANDLE_END_STEP_SUCCESS;
+					ctx->ui_step = HANDLE_END_STEP_CONFIRM;
 					break;
 			}
 		}
 
 		if(ctx->ui_step == HANDLE_END_STEP_HASH_NOT_ALLOWED) {
-			TRACE("Hash NOT ALLOWED!!!");
+			TRACE("Hash NOT ALLOWED");
 			THROW(ERR_HASH_NOT_ALLOWED);
 		}
 		else {
-			TRACE("Hash ALLOWED :)))");
+			TRACE("Hash ALLOWED");
 		}
 
 		//We derive the private key

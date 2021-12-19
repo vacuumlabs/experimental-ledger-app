@@ -72,7 +72,6 @@
     "gen-docs": "yarn typedoc",
     "prepublish": "yarn run clean && yarn run build",
     "run-example": "yarn ts-node -P example-node/tsconfig.json example-node/index.ts",
-    "run-example-experimental": "yarn ts-node -P example-node/tsconfig.json example-node/index2.ts",
     "device-self-test": "mocha --timeout 3600000 -r ts-node/register test/device-self-test/**/*.test.ts",
     "test-all": "yarn device-self-test && yarn test-integration",
     "test-integration": "yarn mocha --timeout 3600000 -r ts-node/register test/integration/**/*.test.ts",
