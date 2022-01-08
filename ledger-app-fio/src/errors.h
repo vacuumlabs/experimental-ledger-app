@@ -59,7 +59,10 @@ enum {
 	ERR_UNEXPECTED_TOKEN      = 0x4720,
 
 	// Invalid integrity hash
-	ERR_HASH_NOT_ALLOWED	  = 0x4800
+	ERR_HASH_NOT_ALLOWED	  = 0x4800,
+
+	// For FOR blocks
+	ERR_TOO_MANY_NESTED_FOR_BLOCKS = 0x4900
 
 };
 

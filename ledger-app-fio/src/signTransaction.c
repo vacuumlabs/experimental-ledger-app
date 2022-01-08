@@ -316,6 +316,49 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 	signTx_handleSendData_ui_runStep();
 }
 
+// ============================ START FOR ===============================
+static void signTx_handleStartFor_ui_runStep()
+{
+	respondSuccessEmptyMsg();
+}
+
+__noinline_due_to_stack__
+void signTx_handleStartForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+
+	{
+		struct {
+			uint8_t numIterations[1];
+			uint8_t allowedIterationHashesHash[32];
+		}* wireData = (void*) wireDataBuffer;
+
+		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
+		VALIDATE(ctx->forLevel < MAX_FOR_DEPTH, ERR_TOO_MANY_NESTED_FOR_BLOCKS);
+
+		ctx->forRegisters[ctx->forLevel] = wireData->numIterations[0];
+
+		// TODO this is probably not a correct way to copy an array
+		// This will be used at the end of each iteration to check whether the received list is still the same
+		// &ctx->allowedIterationHashesHash[ctx->forLevel] = (uint8_t*)wireData->allowedIterationHashesHash;
+		memcpy(ctx->allowedIterationHashesHash[ctx->forLevel], wireData->allowedIterationHashesHash, 32);
+
+		uint8_t constants[] = {0x30, 0x0b};
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+
+		sha_256_finalize(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel], 32);
+		sha_256_init(&ctx->integrityHashContext);
+
+		ctx->forLevel++;
+	}
+
+	signTx_handleInitAction_ui_runStep();
+}
+
 // =============================== END ==================================
 
 enum {
@@ -498,6 +541,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x07, signTx_handleSendDataAPDU);
 		CASE(0x09, signTx_handleInitActionAPDU);
 		CASE(0x0a, signTx_handleEndActionAPDU);
+		CASE(0x0b, signTx_handleStartForAPDU);
 		DEFAULT(NULL)
 #	undef   CASE
 #	undef   DEFAULT

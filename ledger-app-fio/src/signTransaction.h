@@ -55,6 +55,11 @@ typedef struct {
 
 	uint8_t currRegisterIdx;
 	uint64_t registers[NUM_REGISTERS];
+	uint8_t forRegisters[MAX_FOR_DEPTH + 1]; // For number of iterations of for block (will be decreased until 0)
+
+	uint8_t forLevel; // Depth of the current for (nested), 0 if we are not inside a for
+	uint8_t intHashes[MAX_FOR_DEPTH][32]; // List of integrity hashes of fors with lower level
+	uint8_t allowedIterationHashesHash[MAX_FOR_DEPTH][32];
 
 } ins_sign_transaction_context_t;
 
