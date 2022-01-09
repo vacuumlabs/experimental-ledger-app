@@ -68,7 +68,6 @@ async function example() {
       transaction_extensions: null,
     }
 
-    // TODO nie vsetky sendData maju odpocitavat z registra, ale iba tie actionove!!! Takze som to spravil zle a treba to vymysliet inac
     console.log("Send expiration")
     console.log(await appFio.sendData('expiration', basicTx['expiration'], ENCODING_DATETIME, NO_REGISTER));
 
@@ -169,6 +168,12 @@ async function example() {
     console.log(await appFio.sendData(
       'tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING, 0)
     );
+
+    console.log('Start for');
+    console.log(await appFio.startFor(0, ["00000000000000000000000000000000"]));
+
+    console.log('End for');
+    console.log(await appFio.endFor());
 
     console.log("End action")
     console.log(await appFio.endAction(0));

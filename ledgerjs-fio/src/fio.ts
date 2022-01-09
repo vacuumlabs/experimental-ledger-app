@@ -29,6 +29,8 @@ import {endHash} from "./interactions/endHash"
 import {sendData} from "./interactions/sendData"
 import {initAction} from "./interactions/initAction"
 import {endAction} from "./interactions/endAction"
+import {startFor} from "./interactions/startFor"
+import {endFor} from "./interactions/endFor"
 import type {
     HexString,
     ParsedAction,
@@ -39,7 +41,8 @@ import type {
 } from './types/internal'
 import type {
     Action, ActionAuthorisation, BIP32Path, DeviceCompatibility, PublicKey,
-    Serial, Init, End, InitAction, EndAction, SendData, SignedTransactionData, Transaction, TransferFIOTokensData, Version,
+    Serial, Init, End, InitAction, EndAction, SendData, StartFor, EndFor,
+    SignedTransactionData, Transaction, TransferFIOTokensData, Version,
 } from './types/public'
 import utils from "./utils"
 import {assert} from './utils/assert'
@@ -257,6 +260,22 @@ export class Fio {
         return yield* sendData(header, body, encoding, registerIdx, display);
     }
 
+    async startFor(numIterations: number, allowedIterHashes: string[]): Promise<StartForResponse> {
+        return interact(this._startFor(numIterations, allowedIterHashes), this._send);
+    }
+
+    * _startFor(numIterations: number, allowedIterHashes: string[]): Interaction<StartForResponse> {
+        return yield* startFor(numIterations, allowedIterHashes);
+    }
+
+    async endFor(): Promise<EndForResponse> {
+        return interact(this._endFor(), this._send);
+    }
+
+    * _endFor(): Interaction<EndForResponse> {
+        return yield* endFor();
+    }
+
     /**
      * Get public key for the specified BIP 32 path.
      *
@@ -352,6 +371,10 @@ export type InitActionResponse = InitAction
 export type EndActionResponse = EndAction
 
 export type SendDataResponse = SendData
+
+export type StartForResponse = StartFor
+
+export type EndForResponse = EndFor
 
 /**
  * Get public key ([[Fio.getPublicKey]]) request data

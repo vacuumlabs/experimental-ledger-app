@@ -7,8 +7,8 @@ const chainId = "" //XXX
 
 const validTx: Transaction = {
     expiration: "2021-08-28T12:50:36.686",
-    ref_block_num: 0x1122,
-    ref_block_prefix: 0x33445566,
+    ref_block_num: "0x1122",
+    ref_block_prefix: "0x33445566",
     context_free_actions: [],
     actions: [{
         account: "fio.token",
@@ -20,7 +20,7 @@ const validTx: Transaction = {
         data: {
             payee_public_key: "FIO8PRe4WRZJj5mkem6qVGKyvNFgPsNnjNN6kPhh6EaCpzCVin5Jj",
             amount: "20",
-            max_fee: 0x11223344,
+            max_fee: "0x11223344",
             tpid: "rewards@wallet",
             actor: "aftyershcu22",
         },

@@ -91,6 +91,14 @@ export type SendData= {
     ret: string
 }
 
+export type StartFor = {
+    ret: string
+}
+
+export type EndFor = {
+    ret: string
+}
+
 /**
  * Represents BIP 32 path.
  *

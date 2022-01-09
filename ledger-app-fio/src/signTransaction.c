@@ -35,6 +35,12 @@ const uint8_t ALLOWED_HASHES[][32] = {
 		0xe8, 0x0c, 0x2e, 0x66, 0x41, 0xa7, 0x7c, 0x77,
 		0x25, 0xba, 0xb4, 0x4d, 0x38, 0x55, 0x95, 0x19,
 		0xef, 0x35, 0x12, 0xfc, 0x39, 0x1a, 0xfd, 0xf5
+	},
+	{
+		0x4c, 0xb8, 0x4d, 0x9a, 0x2f, 0x9b, 0x0b, 0x67,
+		0x47, 0x79, 0x44, 0xe9, 0xbb, 0x05, 0xa0, 0x60,
+		0xd3, 0x14, 0xfc, 0xe4, 0x34, 0x45, 0xe0, 0xcd,
+		0xcf, 0xc8, 0x1d, 0x74, 0x6d, 0x19, 0x4c, 0xf2
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
@@ -340,6 +346,7 @@ void signTx_handleStartForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
 		VALIDATE(ctx->forLevel < MAX_FOR_DEPTH, ERR_TOO_MANY_NESTED_FOR_BLOCKS);
 
+		// Will be decreased in each iteration
 		ctx->forRegisters[ctx->forLevel] = wireData->numIterations[0];
 
 		// TODO this is probably not a correct way to copy an array
@@ -354,6 +361,42 @@ void signTx_handleStartForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 		sha_256_init(&ctx->integrityHashContext);
 
 		ctx->forLevel++;
+	}
+
+	signTx_handleInitAction_ui_runStep();
+}
+
+// ============================== END FOR =================================
+static void signTx_handleEndFor_ui_runStep()
+{
+	respondSuccessEmptyMsg();
+}
+
+__noinline_due_to_stack__
+void signTx_handleEndForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+
+	{
+		// Is there a for to end? 
+		VALIDATE(ctx->forLevel > 0, ERR_CANT_END_FOR);
+		VALIDATE(ctx->forRegisters[ctx->forLevel] == 0, ERR_CANT_END_FOR);
+
+		uint8_t constants[] = {0x30, 0x0c};
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_init(&ctx->integrityHashContext);
+		sha_256_append(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel], 32);
+		sha_256_append(&ctx->integrityHashContext, ctx->allowedIterationHashesHash[ctx->forLevel], 32);
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+
+		explicit_bzero(ctx->allowedIterationHashesHash, 32);
+		explicit_bzero(ctx->intHashes[ctx->forLevel], 32);
+
+		ctx->forLevel--;
 	}
 
 	signTx_handleInitAction_ui_runStep();
@@ -542,6 +585,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x09, signTx_handleInitActionAPDU);
 		CASE(0x0a, signTx_handleEndActionAPDU);
 		CASE(0x0b, signTx_handleStartForAPDU);
+		CASE(0x0c, signTx_handleEndForAPDU);
 		DEFAULT(NULL)
 #	undef   CASE
 #	undef   DEFAULT
