@@ -39,4 +39,6 @@ void uint8array_name_to_string(uint8_t *value, size_t valueSize, char *out, size
 
 #define MAX_FOR_DEPTH 5
 
+#define MAX_NUM_ALLOWED_ITER_HASHES 6
+
 #endif // H_FIO_APP_FIO

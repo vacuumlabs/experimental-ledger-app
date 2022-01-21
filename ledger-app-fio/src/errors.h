@@ -63,8 +63,11 @@ enum {
 
 	// For FOR blocks
 	ERR_TOO_MANY_NESTED_FOR_BLOCKS = 0x4900,
-	ERR_CANT_END_FOR 			   = 0x4901
+	ERR_CANT_END_FOR 			   = 0x4901,
+	ERR_NOT_IN_FOR				   = 0x4902,
 
+	ERR_UNEXPECTED_INS			   = 0x5000,
+	ERR_INVALID_ITERATION          = 0x5100
 };
 
 #endif // H_FIO_APP_ERRORS

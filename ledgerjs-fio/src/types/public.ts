@@ -87,7 +87,7 @@ export type EndAction = {
     ret: string
 }
 
-export type SendData= {
+export type SendData = {
     ret: string
 }
 
@@ -96,6 +96,14 @@ export type StartFor = {
 }
 
 export type EndFor = {
+    ret: string
+}
+
+export type StartIteration = {
+    ret: string
+}
+
+export type EndIteration = {
     ret: string
 }
 

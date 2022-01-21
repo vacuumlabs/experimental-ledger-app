@@ -68,6 +68,13 @@ async function example() {
       transaction_extensions: null,
     }
 
+    const allowedIterHashes: string[] = [
+      "6f3848f7a2208fb5f4097dedcef1c764de039fdb25fb32bc8830ee6103daced4",
+      "ab87ae7fbb1b78db46d14620e4ce427f32df692b8204ef2bba9b4bd892eb5d14",
+      "bd7fb13786ab250816aab9d7088517e65f744ccea9152dfc669c5a6d6383e51f",
+      "2b755481751337ca10fd6d124acea02053849759b15f2b63a6d2da12ccf6375d",
+    ];
+
     console.log("Send expiration")
     console.log(await appFio.sendData('expiration', basicTx['expiration'], ENCODING_DATETIME, NO_REGISTER));
 
@@ -93,7 +100,8 @@ async function example() {
     console.log(await appFio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8, NO_REGISTER));
 
     console.log("Init first action");
-    console.log(await appFio.initAction(0, 127));
+    // console.log(await appFio.initAction(0, 127));
+    console.log(await appFio.initAction(0, 136));
 
     console.log("Send contract, account, name");
     console.log(await appFio.sendData(
@@ -170,7 +178,28 @@ async function example() {
     );
 
     console.log('Start for');
-    console.log(await appFio.startFor(0, ["00000000000000000000000000000000"]));
+    console.log(await appFio.startFor(1, allowedIterHashes));
+
+      console.log('Start iteration');
+      console.log(await appFio.startIteration());
+
+        console.log('Start for2');
+        console.log(await appFio.startFor(1, allowedIterHashes));
+
+          console.log('Start iteration2');
+          console.log(await appFio.startIteration());
+
+            console.log('Send data inside iteration');
+            console.log(await appFio.sendData("SomeHeader", "aaaaaaaaa", ENCODING_STRING, 0));
+
+          console.log('End iteration2');
+          console.log(await appFio.endIteration(allowedIterHashes));
+
+        console.log('End for2');
+        console.log(await appFio.endFor());
+      
+      console.log('End iteration');
+      console.log(await appFio.endIteration(allowedIterHashes));
 
     console.log('End for');
     console.log(await appFio.endFor());
