@@ -27,8 +27,6 @@ export const ENCODING_UINT64       = BASE_FOR_ENCODING_IDS + 4
 export const ENCODING_HEX          = BASE_FOR_ENCODING_IDS + 5
 export const ENCODING_DATETIME     = BASE_FOR_ENCODING_IDS + 6
 
-export const NO_REGISTER = 200
-
 export const MAX_UINT_64_STR = "18446744073709551615"
 
 export const isString = (data: unknown): data is string =>

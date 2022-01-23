@@ -52,7 +52,6 @@ import {assert} from './utils/assert'
 import {
     isHexString,
     isValidPath,
-    NO_REGISTER,
     parseAuthorization,
     parseBIP32Path,
     parseContractAccountName,
@@ -239,28 +238,28 @@ export class Fio {
         return yield* endHash(parsedPath)
     }
 
-    async startCountedSection(registerIdx: number, actionLength: number): Promise<StartCountedSectionResponse> {
-        return interact(this._startCountedSection(registerIdx, actionLength), this._send);
+    async startCountedSection(sectionLength: number): Promise<StartCountedSectionResponse> {
+        return interact(this._startCountedSection(sectionLength), this._send);
     }
 
-    * _startCountedSection(registerIdx: number, actionLength: number): Interaction<StartCountedSectionResponse> {
-        return yield* startCountedSection(registerIdx, actionLength);
+    * _startCountedSection(sectionLength: number): Interaction<StartCountedSectionResponse> {
+        return yield* startCountedSection(sectionLength);
     }
 
-    async endCountedSection(registerIdx: number): Promise<EndCountedSectionResponse> {
-        return interact(this._endCountedSection(registerIdx), this._send);
+    async endCountedSection(): Promise<EndCountedSectionResponse> {
+        return interact(this._endCountedSection(), this._send);
     }
 
-    * _endCountedSection(registerIdx: number): Interaction<EndCountedSectionResponse> {
-        return yield* endCountedSection(registerIdx);
+    * _endCountedSection(): Interaction<EndCountedSectionResponse> {
+        return yield* endCountedSection();
     }
 
-    async sendData(header: string, body: string, encoding: number, registerIdx: number = NO_REGISTER, display: boolean = false): Promise<SendDataResponse> {
-        return interact(this._sendData(header, body, encoding, registerIdx, display), this._send);
+    async sendData(header: string, body: string, encoding: number, display: boolean = false): Promise<SendDataResponse> {
+        return interact(this._sendData(header, body, encoding, display), this._send);
     }
 
-    *_sendData(header: string, body: string, encoding: number, registerIdx: number = NO_REGISTER, display: boolean = false): Interaction<SendDataResponse> {
-        return yield* sendData(header, body, encoding, registerIdx, display);
+    *_sendData(header: string, body: string, encoding: number, display: boolean = false): Interaction<SendDataResponse> {
+        return yield* sendData(header, body, encoding, display);
     }
 
     async startFor(minNumIterations: number, maxNumIterations: number, allowedIterHashes: string[]): Promise<StartForResponse> {

@@ -13,12 +13,12 @@ const send = (params: {
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
 
 
-export function* endCountedSection(registerIdx: number): Interaction<EndCountedSection> {
+export function* endCountedSection(): Interaction<EndCountedSection> {
     const P2_UNUSED = 0x00
     const response = yield send({
         p1: 0x0a,
         p2: P2_UNUSED,
-        data: uint8_to_buf(registerIdx as Uint8_t),
+        data: Buffer.from(''),
         expectedResponseLength: 0,  // Expect 0 bytes in response
     })
 

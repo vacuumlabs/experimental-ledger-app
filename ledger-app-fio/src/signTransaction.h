@@ -53,8 +53,10 @@ typedef struct {
 	uint64_t uint64Body;
 	uint8_t encoding;
 
-	uint8_t currRegisterIdx;
-	uint64_t registers[NUM_REGISTERS];
+	uint8_t sectionLevel; // The current nesting level of counted sections, 0 means no counted section
+	uint64_t expectedSectionLength[MAX_NESTED_COUNTED_SECTIONS + 1];
+	uint64_t currSectionLength[MAX_NESTED_COUNTED_SECTIONS + 1]; // Will be increased by SEND_DATA
+
 	uint8_t forIterationsCnt[MAX_FOR_DEPTH + 1]; // Current number for iterations
 	uint8_t forMinIterations[MAX_FOR_DEPTH + 1]; // Min allowed number of iterations
 	uint8_t forMaxIterations[MAX_FOR_DEPTH + 1]; // Max allowed number of iterations

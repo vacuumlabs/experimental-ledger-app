@@ -34,7 +34,7 @@ void uint8array_name_to_string(uint8_t *value, size_t valueSize, char *out, size
 
 #define MAX_BODY_LENGTH 200
 
-#define NUM_REGISTERS 8
+#define MAX_NESTED_COUNTED_SECTIONS 8
 #define NO_REGISTER 200
 
 #define MAX_FOR_DEPTH 5

@@ -9,7 +9,6 @@ import {
   ENCODING_HEX,
   parseNameString,
   parseContractAccountName,
-  NO_REGISTER
 } from "../src/utils/parse";
 import { Fio, HARDENED, GetPublicKeyRequest, SignTransactionRequest, Transaction } from "../src/fio";
 import {InvalidDataReason} from "../src/errors/invalidDataReason"
@@ -69,56 +68,54 @@ async function example() {
     }
 
     const allowedIterHashes: string[][] = [
-      ["1ad6d50fa59bcd4b6356bead7d788f75bcb0d4e09f159be68aba3c56b7d7ea5a"],
-      ["1844af1ca6e923d064649332d678688412b2d76e77c42f788391448170ea019b"],
+      ["ab07a41d0e6f46ffb43713400e1a663d58e0f6871c68a16a6c6cdba00b2cbce4"],
+      ["82022e0943eed93055b1cdd28f28f19d36c672ebf1febd2be637b644515dbc70"],
       []
     ];
 
     console.log("Send expiration")
-    console.log(await appFio.sendData('expiration', basicTx['expiration'], ENCODING_DATETIME, NO_REGISTER));
+    console.log(await appFio.sendData('expiration', basicTx['expiration'], ENCODING_DATETIME));
 
     console.log("Send ref_block_num")
-    console.log(await appFio.sendData('ref_block_num', basicTx['ref_block_num'], ENCODING_UINT16, NO_REGISTER));
+    console.log(await appFio.sendData('ref_block_num', basicTx['ref_block_num'], ENCODING_UINT16));
 
     console.log("Send ref_block_prefix")
-    console.log(await appFio.sendData('ref_block_prefix', basicTx['ref_block_prefix'], ENCODING_UINT32, NO_REGISTER));
+    console.log(await appFio.sendData('ref_block_prefix', basicTx['ref_block_prefix'], ENCODING_UINT32));
 
     console.log("Send max_net_usage_words")
-    console.log(await appFio.sendData('mx_net_words', '0', ENCODING_UINT8, NO_REGISTER));
+    console.log(await appFio.sendData('mx_net_words', '0', ENCODING_UINT8));
 
     console.log("Send max_cpu_usage_ms")
-    console.log(await appFio.sendData('mx_cpu_ms', '0', ENCODING_UINT8, NO_REGISTER));
+    console.log(await appFio.sendData('mx_cpu_ms', '0', ENCODING_UINT8));
 
     console.log("Send delay_sec")
-    console.log(await appFio.sendData('delay_sec', '0', ENCODING_UINT8, NO_REGISTER));
+    console.log(await appFio.sendData('delay_sec', '0', ENCODING_UINT8));
 
     console.log("Send context_free_actions_len")
-    console.log(await appFio.sendData('cf_act_amt', basicTx['context_free_actions'].length.toString(), ENCODING_UINT8, NO_REGISTER));
+    console.log(await appFio.sendData('cf_act_amt', basicTx['context_free_actions'].length.toString(), ENCODING_UINT8));
 
     console.log("Send actions_len")
-    console.log(await appFio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8, NO_REGISTER));
+    console.log(await appFio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8));
 
     console.log("Init first counted section");
-    console.log(await appFio.startCountedSection(0, 136));
+    console.log(await appFio.startCountedSection(136));
 
     console.log("Send contract, account, name");
     console.log(await appFio.sendData(
       "contract_account_name",
       parseContractAccountName(infoTestnet.chain_id, basicTx['actions'][0]['account'], basicTx['actions'][0]['name'], InvalidDataReason.ACTION_NOT_SUPPORTED),
-      ENCODING_HEX,
-      0
+      ENCODING_HEX
     ));
 
     console.log("Send number_of_authorizations")
-    console.log(await appFio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8, 0));
+    console.log(await appFio.sendData('num_auths', basicTx['actions'][0]['authorization'].length.toString(), ENCODING_UINT8));
 
     console.log("Send actor")
     console.log(await appFio.sendData(
       'actor',
       parseNameString(basicTx['actions'][0]['authorization'][0]['actor'],
       InvalidDataReason.INVALID_ACTOR),
-      ENCODING_HEX,
-      0
+      ENCODING_HEX
     ));
 
     console.log("Send permissions")
@@ -126,8 +123,7 @@ async function example() {
       'permission',
       parseNameString(basicTx['actions'][0]['authorization'][0]['permission'],
       InvalidDataReason.INVALID_PERMISSION),
-      ENCODING_HEX,
-      0
+      ENCODING_HEX
     ));
 
     // Data length
@@ -138,41 +134,41 @@ async function example() {
                      2 * AMOUNT_TYPE_LENGTH + NAME_VARIABLE_LENGTH + // amount, max_fee, actor
                      + SIMPLE_LENGTH_VARIABLE_LENGTH + basicTx['actions'][0]['data']['tpid'].length; // tpid_length, tpid
     console.log("Send data_length")
-    console.log(await appFio.sendData('data_len', dataLength.toString(), ENCODING_UINT8, 0));
+    console.log(await appFio.sendData('data_len', dataLength.toString(), ENCODING_UINT8));
 
     console.log("Send pubkey_length")
     console.log(await appFio.sendData(
-      'pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8, 0)
+      'pk_len', basicTx['actions'][0]['data']['payee_public_key'].length.toString(), ENCODING_UINT8)
     );
 
     console.log("Send pubkey")
     console.log(await appFio.sendData(
-      'pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, 0, true)
+      'pubkey', basicTx['actions'][0]['data']['payee_public_key'], ENCODING_STRING, true)
     );
 
     console.log("Send amount")
     console.log(await appFio.sendData(
-      'amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, 0, true)
+      'amount', basicTx['actions'][0]['data']['amount'], ENCODING_UINT64, true)
     );
 
     console.log("Send max_fee")
     console.log(await appFio.sendData(
-      'max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, 0, true)
+      'max_fee', basicTx['actions'][0]['data']['max_fee'], ENCODING_UINT64, true)
     );
 
     console.log("Send actor")
     console.log(await appFio.sendData(
-      'actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX, 0)
+      'actor', parseNameString(basicTx['actions'][0]['data']['actor'], InvalidDataReason.INVALID_ACTOR), ENCODING_HEX)
     );
 
     console.log("Send tpid_length")
     console.log(await appFio.sendData(
-      'tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8, 0)
+      'tpid_len', basicTx['actions'][0]['data']['tpid'].length.toString(), ENCODING_UINT8)
     );
     
     console.log("Send tpid")
     console.log(await appFio.sendData(
-      'tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING, 0)
+      'tpid', basicTx['actions'][0]['data']['tpid'], ENCODING_STRING)
     );
 
     console.log('Start for');
@@ -187,14 +183,20 @@ async function example() {
           console.log('Start iteration2');
           console.log(await appFio.startIteration());
 
-            console.log('Send data inside iteration');
-            console.log(await appFio.sendData("SomeHeader", "aaaaaaaaa", ENCODING_STRING, 0));
+            console.log('Start second counted section');
+            console.log(await appFio.startCountedSection(9));
 
-            console.log('Start for3');
-            console.log(await appFio.startFor(0, 2, allowedIterHashes[2]));
+              console.log('Send data inside iteration');
+              console.log(await appFio.sendData("SomeHeader", "aaaaaaaaa", ENCODING_STRING));
 
-            console.log('End for3');
-            console.log(await appFio.endFor());
+              console.log('Start for3');
+              console.log(await appFio.startFor(0, 2, allowedIterHashes[2]));
+
+              console.log('End for3');
+              console.log(await appFio.endFor());
+
+            console.log('End second counted section');
+            console.log(await appFio.endCountedSection());
 
           console.log('End iteration2');
           console.log(await appFio.endIteration(allowedIterHashes[1]));
@@ -209,7 +211,7 @@ async function example() {
     console.log(await appFio.endFor());
 
     console.log("End first counted section")
-    console.log(await appFio.endCountedSection(0));
+    console.log(await appFio.endCountedSection());
 
     // We omit extension points here
 

@@ -53,6 +53,12 @@ const uint8_t ALLOWED_HASHES[][32] = {
 		0x8f, 0xab, 0x1c, 0x80, 0xe5, 0x9b, 0x26, 0x1f,
 		0x3e, 0xdb, 0xcd, 0x1c, 0xc8, 0xcc, 0x53, 0x12,
 		0x8e, 0x80, 0xa6, 0x34, 0x8c, 0x06, 0xa0, 0x74
+	},
+	{
+		0x84, 0xe7, 0xdd, 0xd9, 0x6d, 0x1e, 0xdf, 0x41,
+		0x07, 0xa5, 0xf8, 0x7a, 0xfa, 0x11, 0xa5, 0x5d,
+		0x61, 0xbd, 0x0c, 0x92, 0x3f, 0xd4, 0x62, 0xcc,
+		0xf3, 0xd7, 0x08, 0xf4, 0xee, 0x00, 0xde, 0x3c
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
@@ -106,7 +112,7 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 
 		ctx->network = getNetworkByChainId(wireData->chainId, SIZEOF(wireData->chainId));
 
-		ctx->currRegisterIdx = NO_REGISTER;
+		ctx->sectionLevel = 0;
 	}
 
 	signTx_handleInit_ui_runStep();
@@ -130,22 +136,20 @@ void signTx_handleStartCountedSectionAPDU(uint8_t p2, uint8_t* wireDataBuffer, s
 
 	{
 		struct {
-			uint8_t registerIdx[1];
 			uint8_t sectionLength[9]; // 0-terminated
 		}* wireData = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
 		
-		VALIDATE(wireData->registerIdx[0] != NO_REGISTER, ERR_INVALID_DATA);
-		VALIDATE(0 <= wireData->registerIdx[0] && wireData->registerIdx[0] < NUM_REGISTERS, ERR_INVALID_DATA);
-		VALIDATE(ctx->registers[wireData->registerIdx[0]] == 0, ERR_INVALID_DATA);
-
-		ctx->currRegisterIdx = wireData->registerIdx[0];
+		VALIDATE(ctx->sectionLevel < MAX_NESTED_COUNTED_SECTIONS, ERR_UNEXPECTED_INS);
 
 		uint64_t parsedSectionLength = (uint32_t)u8be_read(wireData->sectionLength);
-		ctx->registers[ctx->currRegisterIdx] = parsedSectionLength;
 
-		uint8_t constants[] = {0x30, 0x09};
+		ctx->sectionLevel++;
+		ctx->expectedSectionLength[ctx->sectionLevel] = parsedSectionLength;
+		ctx->currSectionLength[ctx->sectionLevel] = 0;
+
+		uint8_t constants[] = {0x30, 0x09, ctx->sectionLevel};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, wireData->sectionLength, SIZEOF(wireData->sectionLength));
 	}
@@ -170,21 +174,18 @@ void signTx_handleEndCountedSectionAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	}
 
 	{
-		struct {
-			uint8_t registerIdx[1];
-		}* wireData = (void*) wireDataBuffer;
+		VALIDATE(ctx->sectionLevel > 0, ERR_UNEXPECTED_INS);
+		VALIDATE(ctx->expectedSectionLength[ctx->sectionLevel] == ctx->currSectionLength[ctx->sectionLevel], ERR_INVALID_DATA);
 
-		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
+		// Add the length of all data received in this section to the parent section
+		if(ctx->sectionLevel > 1) {
+			ctx->currSectionLength[ctx->sectionLevel - 1] += ctx->currSectionLength[ctx->sectionLevel];
+		}
 
-		VALIDATE(wireData->registerIdx[0] == ctx->currRegisterIdx, ERR_INVALID_DATA);
-		VALIDATE(ctx->currRegisterIdx != NO_REGISTER, ERR_ASSERT);
-		VALIDATE(0 <= ctx->currRegisterIdx && ctx->currRegisterIdx < NUM_REGISTERS, ERR_INVALID_DATA);
-		VALIDATE(ctx->registers[ctx->currRegisterIdx] == 0, ERR_ASSERT);
+		ctx->sectionLevel--;
 
 		uint8_t constants[] = {0x30, 0x0a};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
-
-		ctx->currRegisterIdx = NO_REGISTER;
 	}
 
 	signTx_handleEndCountedSection_ui_runStep();
@@ -226,7 +227,6 @@ static void signTx_handleSendData_ui_runStep()
 // wireDataBuffer format:
 // SIZE_B 			MEANING
 // -------------------------
-// 1 				register_index -- decrement this register by body_length
 // 1 				encoding
 // 1 				header_length
 // header_length	header
@@ -238,7 +238,6 @@ __noinline_due_to_stack__
 void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	struct {
-		uint8_t registerIdx[1];
 		uint8_t encoding[1];
 		uint8_t headerLength[1];
 		uint8_t header[NAME_STRING_MAX_LENGTH];
@@ -254,18 +253,11 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 	VALIDATE(expectedWireData1Length + expectedWireData2Length == wireDataSize, ERR_INVALID_DATA);
 	str_validateNullTerminatedTextBuffer(wireData1->header, wireData1->headerLength[0]);
 
-	VALIDATE(wireData1->registerIdx[0] == ctx->currRegisterIdx, ERR_INVALID_DATA);
-
-	if(ctx->currRegisterIdx == NO_REGISTER) {
-		uint8_t noRegisterBuf[] = {0};
-		sha_256_append(&ctx->integrityHashContext, noRegisterBuf, SIZEOF(noRegisterBuf));
-	} else {
-		uint8_t registerExistsBuf[] = {1};
-		sha_256_append(&ctx->integrityHashContext, registerExistsBuf, SIZEOF(registerExistsBuf));
-		VALIDATE(0 <= ctx->currRegisterIdx && ctx->currRegisterIdx < NUM_REGISTERS, ERR_INVALID_DATA);
-		VALIDATE(wireData2->bodyLength[0] <= ctx->registers[ctx->currRegisterIdx], ERR_INVALID_DATA);
-		ctx->registers[ctx->currRegisterIdx] -= wireData2->bodyLength[0];
-		VALIDATE(ctx->registers[ctx->currRegisterIdx] >= 0, ERR_INVALID_DATA);
+	{
+		// Count this data towards the current counted section if there is one
+		if(ctx->sectionLevel > 0) {
+			ctx->currSectionLength[ctx->sectionLevel] += wireData2->bodyLength[0];
+		}
 	}
 
 	ctx->headerBuf = (char*)wireData1->header;
@@ -311,7 +303,7 @@ void signTx_handleSendDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 
 	{
 		// Add to integrity hash
-		uint8_t constants[] = {0x30, 0x07, p2, ctx->encoding, wireData2->bodyLength[0]};
+		uint8_t constants[] = {0x30, 0x07, p2, ctx->encoding, wireData2->bodyLength[0], ctx->sectionLevel};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
 	}
