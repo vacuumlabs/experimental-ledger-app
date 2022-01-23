@@ -112,15 +112,15 @@ void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 	signTx_handleInit_ui_runStep();
 }
 
-// ========================= INIT ACTION ============================
+// ========================= START COUNTED SECTION ============================
 
-static void signTx_handleInitAction_ui_runStep()
+static void signTx_handleStartCountedSection_ui_runStep()
 {
 	respondSuccessEmptyMsg();
 }
 
 __noinline_due_to_stack__
-void signTx_handleInitActionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTx_handleStartCountedSectionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -131,7 +131,7 @@ void signTx_handleInitActionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	{
 		struct {
 			uint8_t registerIdx[1];
-			uint8_t actionLength[9]; // 0-terminated
+			uint8_t sectionLength[9]; // 0-terminated
 		}* wireData = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
@@ -142,26 +142,26 @@ void signTx_handleInitActionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 
 		ctx->currRegisterIdx = wireData->registerIdx[0];
 
-		uint64_t parsedActionLength = (uint32_t)u8be_read(wireData->actionLength);
-		ctx->registers[ctx->currRegisterIdx] = parsedActionLength;
+		uint64_t parsedSectionLength = (uint32_t)u8be_read(wireData->sectionLength);
+		ctx->registers[ctx->currRegisterIdx] = parsedSectionLength;
 
 		uint8_t constants[] = {0x30, 0x09};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
-		sha_256_append(&ctx->integrityHashContext, wireData->actionLength, SIZEOF(wireData->actionLength));
+		sha_256_append(&ctx->integrityHashContext, wireData->sectionLength, SIZEOF(wireData->sectionLength));
 	}
 
-	signTx_handleInitAction_ui_runStep();
+	signTx_handleStartCountedSection_ui_runStep();
 }
 
-// ========================= END ACTION ============================
+// ========================= END COUNTED SECTION ============================
 
-static void signTx_handleEndAction_ui_runStep()
+static void signTx_handleEndCountedSection_ui_runStep()
 {
 	respondSuccessEmptyMsg();
 }
 
 __noinline_due_to_stack__
-void signTx_handleEndActionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTx_handleEndCountedSectionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -187,7 +187,7 @@ void signTx_handleEndActionAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wire
 		ctx->currRegisterIdx = NO_REGISTER;
 	}
 
-	signTx_handleEndAction_ui_runStep();
+	signTx_handleEndCountedSection_ui_runStep();
 }
 
 // ========================== SEND DATA =============================
@@ -732,8 +732,8 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x01, signTx_handleInitAPDU);
 		CASE(0x06, signTx_handleEndAPDU);
 		CASE(0x07, signTx_handleSendDataAPDU);
-		CASE(0x09, signTx_handleInitActionAPDU);
-		CASE(0x0a, signTx_handleEndActionAPDU);
+		CASE(0x09, signTx_handleStartCountedSectionAPDU);
+		CASE(0x0a, signTx_handleEndCountedSectionAPDU);
 		CASE(0x0b, signTx_handleStartForAPDU);
 		CASE(0x0c, signTx_handleEndForAPDU);
 		CASE(0x0d, signTx_handleStartIterationAPDU);

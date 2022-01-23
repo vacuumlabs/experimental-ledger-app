@@ -27,8 +27,8 @@ import {signTransaction} from "./interactions/signTransaction"
 import {initHash} from "./interactions/initHash"
 import {endHash} from "./interactions/endHash"
 import {sendData} from "./interactions/sendData"
-import {initAction} from "./interactions/initAction"
-import {endAction} from "./interactions/endAction"
+import {startCountedSection} from "./interactions/startCountedSection"
+import {endCountedSection} from "./interactions/endCountedSection"
 import {startFor} from "./interactions/startFor"
 import {endFor} from "./interactions/endFor"
 import {startIteration} from "./interactions/startIteration"
@@ -43,7 +43,7 @@ import type {
 } from './types/internal'
 import type {
     Action, ActionAuthorisation, BIP32Path, DeviceCompatibility, PublicKey,
-    Serial, Init, End, InitAction, EndAction, SendData, StartFor, EndFor,
+    Serial, Init, End, StartCountedSection, EndCountedSection, SendData, StartFor, EndFor,
     StartIteration, EndIteration,
     SignedTransactionData, Transaction, TransferFIOTokensData, Version,
 } from './types/public'
@@ -239,20 +239,20 @@ export class Fio {
         return yield* endHash(parsedPath)
     }
 
-    async initAction(registerIdx: number, actionLength: number): Promise<InitActionResponse> {
-        return interact(this._initAction(registerIdx, actionLength), this._send);
+    async startCountedSection(registerIdx: number, actionLength: number): Promise<StartCountedSectionResponse> {
+        return interact(this._startCountedSection(registerIdx, actionLength), this._send);
     }
 
-    * _initAction(registerIdx: number, actionLength: number): Interaction<InitActionResponse> {
-        return yield* initAction(registerIdx, actionLength);
+    * _startCountedSection(registerIdx: number, actionLength: number): Interaction<StartCountedSectionResponse> {
+        return yield* startCountedSection(registerIdx, actionLength);
     }
 
-    async endAction(registerIdx: number): Promise<EndActionResponse> {
-        return interact(this._endAction(registerIdx), this._send);
+    async endCountedSection(registerIdx: number): Promise<EndCountedSectionResponse> {
+        return interact(this._endCountedSection(registerIdx), this._send);
     }
 
-    * _endAction(registerIdx: number): Interaction<EndActionResponse> {
-        return yield* endAction(registerIdx);
+    * _endCountedSection(registerIdx: number): Interaction<EndCountedSectionResponse> {
+        return yield* endCountedSection(registerIdx);
     }
 
     async sendData(header: string, body: string, encoding: number, registerIdx: number = NO_REGISTER, display: boolean = false): Promise<SendDataResponse> {
@@ -385,9 +385,9 @@ export type InitHashResponse = Init
 
 export type EndHashResponse = End
 
-export type InitActionResponse = InitAction
+export type StartCountedSectionResponse = StartCountedSection
 
-export type EndActionResponse = EndAction
+export type EndCountedSectionResponse = EndCountedSection
 
 export type SendDataResponse = SendData
 

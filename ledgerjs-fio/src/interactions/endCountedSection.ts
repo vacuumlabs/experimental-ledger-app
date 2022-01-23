@@ -1,6 +1,6 @@
-import { Uint32_t, Uint64_str, Uint8_t } from "types/internal"
-import { uint32_to_buf, uint64_to_buf, uint8_to_buf } from "../../src/utils/serialize"
-import type {InitAction} from "../types/public"
+import { Uint32_t, Uint8_t } from "types/internal"
+import { uint32_to_buf, uint8_to_buf } from "../utils/serialize"
+import type {EndCountedSection} from "../types/public"
 import utils from "../utils"
 import {INS} from "./common/ins"
 import type {Interaction, SendParams} from "./common/types"
@@ -13,12 +13,12 @@ const send = (params: {
 }): SendParams => ({ins: INS.SIGN_TX, ...params})
 
 
-export function* initAction(registerIdx: number, actionLength: number): Interaction<InitAction> {
+export function* endCountedSection(registerIdx: number): Interaction<EndCountedSection> {
     const P2_UNUSED = 0x00
     const response = yield send({
-        p1: 0x09,
+        p1: 0x0a,
         p2: P2_UNUSED,
-        data: Buffer.concat([uint8_to_buf(registerIdx as Uint8_t), uint64_to_buf(actionLength.toString() as Uint64_str), uint8_to_buf(0 as Uint8_t)]),
+        data: uint8_to_buf(registerIdx as Uint8_t),
         expectedResponseLength: 0,  // Expect 0 bytes in response
     })
 

@@ -79,11 +79,11 @@ export type Init = {
 
 export type End = SignedTransactionData
 
-export type InitAction = {
+export type StartCountedSection = {
     ret: string
 }
 
-export type EndAction = {
+export type EndCountedSection = {
     ret: string
 }
 

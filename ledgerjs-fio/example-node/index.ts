@@ -98,9 +98,8 @@ async function example() {
     console.log("Send actions_len")
     console.log(await appFio.sendData('act_amt', basicTx['actions'].length.toString(), ENCODING_UINT8, NO_REGISTER));
 
-    console.log("Init first action");
-    // console.log(await appFio.initAction(0, 127));
-    console.log(await appFio.initAction(0, 136));
+    console.log("Init first counted section");
+    console.log(await appFio.startCountedSection(0, 136));
 
     console.log("Send contract, account, name");
     console.log(await appFio.sendData(
@@ -209,8 +208,8 @@ async function example() {
     console.log('End for');
     console.log(await appFio.endFor());
 
-    console.log("End action")
-    console.log(await appFio.endAction(0));
+    console.log("End first counted section")
+    console.log(await appFio.endCountedSection(0));
 
     // We omit extension points here
 
