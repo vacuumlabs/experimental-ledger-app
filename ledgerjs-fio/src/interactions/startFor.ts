@@ -17,7 +17,7 @@ const send = (params: {
 
 
 // allowedIterHashes is a list of allowed hashes in hex strings
-export function* startFor(numIterations: number, allowedIterHashes: string[]): Interaction<StartFor> {
+export function* startFor(minNumIterations: number, maxNumIterations: number, allowedIterHashes: string[]): Interaction<StartFor> {
     const P2_UNUSED = 0x00
 
     // console.log('joined: ', allowedIterHashes.join());
@@ -30,7 +30,11 @@ export function* startFor(numIterations: number, allowedIterHashes: string[]): I
     const response = yield send({
         p1: 0x0b,
         p2: P2_UNUSED,
-        data: Buffer.concat([uint8_to_buf(numIterations as Uint8_t), hex_to_buf(allowedIterHashesHash)]),
+        data: Buffer.concat([
+            uint8_to_buf(minNumIterations as Uint8_t),
+            uint8_to_buf(maxNumIterations as Uint8_t),
+            hex_to_buf(allowedIterHashesHash)
+        ]),
         expectedResponseLength: 0,  // Expect 0 bytes in response
     })
 

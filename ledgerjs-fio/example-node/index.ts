@@ -68,11 +68,10 @@ async function example() {
       transaction_extensions: null,
     }
 
-    const allowedIterHashes: string[] = [
-      "6f3848f7a2208fb5f4097dedcef1c764de039fdb25fb32bc8830ee6103daced4",
-      "ab87ae7fbb1b78db46d14620e4ce427f32df692b8204ef2bba9b4bd892eb5d14",
-      "bd7fb13786ab250816aab9d7088517e65f744ccea9152dfc669c5a6d6383e51f",
-      "2b755481751337ca10fd6d124acea02053849759b15f2b63a6d2da12ccf6375d",
+    const allowedIterHashes: string[][] = [
+      ["1ad6d50fa59bcd4b6356bead7d788f75bcb0d4e09f159be68aba3c56b7d7ea5a"],
+      ["1844af1ca6e923d064649332d678688412b2d76e77c42f788391448170ea019b"],
+      []
     ];
 
     console.log("Send expiration")
@@ -178,13 +177,13 @@ async function example() {
     );
 
     console.log('Start for');
-    console.log(await appFio.startFor(1, allowedIterHashes));
+    console.log(await appFio.startFor(1, 3, allowedIterHashes[0]));
 
       console.log('Start iteration');
       console.log(await appFio.startIteration());
 
         console.log('Start for2');
-        console.log(await appFio.startFor(1, allowedIterHashes));
+        console.log(await appFio.startFor(0, 1, allowedIterHashes[1]));
 
           console.log('Start iteration2');
           console.log(await appFio.startIteration());
@@ -192,14 +191,20 @@ async function example() {
             console.log('Send data inside iteration');
             console.log(await appFio.sendData("SomeHeader", "aaaaaaaaa", ENCODING_STRING, 0));
 
+            console.log('Start for3');
+            console.log(await appFio.startFor(0, 2, allowedIterHashes[2]));
+
+            console.log('End for3');
+            console.log(await appFio.endFor());
+
           console.log('End iteration2');
-          console.log(await appFio.endIteration(allowedIterHashes));
+          console.log(await appFio.endIteration(allowedIterHashes[1]));
 
         console.log('End for2');
         console.log(await appFio.endFor());
       
       console.log('End iteration');
-      console.log(await appFio.endIteration(allowedIterHashes));
+      console.log(await appFio.endIteration(allowedIterHashes[0]));
 
     console.log('End for');
     console.log(await appFio.endFor());

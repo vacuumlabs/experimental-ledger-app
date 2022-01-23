@@ -49,22 +49,10 @@ const uint8_t ALLOWED_HASHES[][32] = {
 		0xe1, 0x3d, 0xc3, 0xf9, 0x19, 0x51, 0xb3, 0x32
 	},
 	{
-		0xbf, 0xc4, 0xb0, 0x84, 0x9b, 0x45, 0xdc, 0x29,
-		0x81, 0x5e, 0xa0, 0xc9, 0xa9, 0xb6, 0x04, 0xbc,
-		0x98, 0x9c, 0xa3, 0xe7, 0xd5, 0xe9, 0xad, 0x72,
-		0x4f, 0x31, 0x85, 0x91, 0x55, 0x8f, 0x35, 0xc4
-	},
-	{
-		0xaa, 0x9b, 0x8e, 0xa1, 0x1e, 0xea, 0xe7, 0x65,
-		0x22, 0xed, 0xeb, 0x92, 0xeb, 0xc4, 0x11, 0xf5,
-		0xc7, 0x48, 0xea, 0xea, 0xc8, 0xd3, 0x5b, 0x34,
-		0x7c, 0x3a, 0xf1, 0xeb, 0xb5, 0xfb, 0x2f, 0xe2
-	},
-	{
-		0x55, 0x41, 0x27, 0x29, 0xfd, 0xc0, 0xa0, 0x63,
-		0x05, 0x6a, 0x12, 0xc3, 0x62, 0x10, 0xeb, 0x53,
-		0x28, 0x1b, 0xf0, 0x0d, 0xb6, 0x75, 0x00, 0x39,
-		0x97, 0xb9, 0xbb, 0x31, 0x04, 0x8b, 0x77, 0xd2
+		0x6c, 0xe0, 0xd8, 0xcb, 0xb4, 0xab, 0xbb, 0x38,
+		0x8f, 0xab, 0x1c, 0x80, 0xe5, 0x9b, 0x26, 0x1f,
+		0x3e, 0xdb, 0xcd, 0x1c, 0xc8, 0xcc, 0x53, 0x12,
+		0x8e, 0x80, 0xa6, 0x34, 0x8c, 0x06, 0xa0, 0x74
 	}
 };
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
@@ -363,7 +351,8 @@ void signTx_handleStartForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 
 	{
 		struct {
-			uint8_t numIterations[1];
+			uint8_t minNumIterations[1];
+			uint8_t maxNumIterations[1];
 			uint8_t allowedIterationHashesHash[32];
 		}* wireData = (void*) wireDataBuffer;
 
@@ -371,9 +360,15 @@ void signTx_handleStartForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 		// TRACE("sizeof wireData: %d", SIZEOF(*wireData));
 		// VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
 		VALIDATE(ctx->forLevel < MAX_FOR_DEPTH, ERR_TOO_MANY_NESTED_FOR_BLOCKS);
+		VALIDATE(wireData->minNumIterations[0] <= wireData->maxNumIterations[0], ERR_INVALID_DATA);
 
 		uint8_t constants[] = {0x30, 0x0b};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		// Put possible iterations range into the integrity hash
+		TRACE("min: %d", wireData->minNumIterations[0]);
+		TRACE("max: %d", wireData->maxNumIterations[0]);
+		sha_256_append(&ctx->integrityHashContext, wireData->minNumIterations, 1);
+		sha_256_append(&ctx->integrityHashContext, wireData->maxNumIterations, 1);
 
 		sha_256_finalize(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel], 32);
 		sha_256_init(&ctx->integrityHashContext);
@@ -389,7 +384,9 @@ void signTx_handleStartForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireD
 		TRACE_BUFFER(&ctx->allowedIterationHashesHash, 32);
 
 		// Will be decreased in each iteration
-		ctx->forRegisters[ctx->forLevel] = wireData->numIterations[0];
+		ctx->forMinIterations[ctx->forLevel] = wireData->minNumIterations[0];
+		ctx->forMaxIterations[ctx->forLevel] = wireData->maxNumIterations[0];
+		ctx->forIterationsCnt[ctx->forLevel] = 0;
 	}
 
 	signTx_handleStartFor_ui_runStep();
@@ -413,7 +410,10 @@ void signTx_handleEndForAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDat
 	{
 		// Is there a for to end? 
 		VALIDATE(ctx->forLevel > 0, ERR_CANT_END_FOR);
-		VALIDATE(ctx->forRegisters[ctx->forLevel] == 0, ERR_CANT_END_FOR);
+		// Were there enought iterations?
+		VALIDATE(ctx->forIterationsCnt[ctx->forLevel] >= ctx->forMinIterations[ctx->forLevel], ERR_CANT_END_FOR);
+		// Were there not too many iterations?
+		VALIDATE(ctx->forIterationsCnt[ctx->forLevel] <= ctx->forMaxIterations[ctx->forLevel], ERR_CANT_END_FOR);
 
 		uint8_t constants[] = {0x30, 0x0c};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
@@ -448,9 +448,10 @@ void signTx_handleStartIterationAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 
 	{
 		VALIDATE(ctx->forLevel > 0, ERR_NOT_IN_FOR);
-		VALIDATE(ctx->forRegisters[ctx->forLevel] > 0, ERR_UNEXPECTED_INS);
+		// Can we start another iteration?
+		VALIDATE(ctx->forIterationsCnt[ctx->forLevel] < ctx->forMaxIterations[ctx->forLevel], ERR_UNEXPECTED_INS);
 
-		ctx->forRegisters[ctx->forLevel]--;
+		ctx->forIterationsCnt[ctx->forLevel]++;
 
 		// An empty hash is already started from endIteration or startFor
 		uint8_t constants[] = {0x30, 0x0d};

@@ -263,12 +263,12 @@ export class Fio {
         return yield* sendData(header, body, encoding, registerIdx, display);
     }
 
-    async startFor(numIterations: number, allowedIterHashes: string[]): Promise<StartForResponse> {
-        return interact(this._startFor(numIterations, allowedIterHashes), this._send);
+    async startFor(minNumIterations: number, maxNumIterations: number, allowedIterHashes: string[]): Promise<StartForResponse> {
+        return interact(this._startFor(minNumIterations, maxNumIterations, allowedIterHashes), this._send);
     }
 
-    * _startFor(numIterations: number, allowedIterHashes: string[]): Interaction<StartForResponse> {
-        return yield* startFor(numIterations, allowedIterHashes);
+    * _startFor(minNumIterations: number, maxNumIterations: number, allowedIterHashes: string[]): Interaction<StartForResponse> {
+        return yield* startFor(minNumIterations, maxNumIterations, allowedIterHashes);
     }
 
     async endFor(): Promise<EndForResponse> {

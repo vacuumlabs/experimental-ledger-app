@@ -23,7 +23,8 @@ export function* endIteration(allowedIterHashes: string[]): Interaction<EndItera
     const response = yield send({
         p1: 0x0e,
         p2: P2_UNUSED,
-        data: Buffer.concat([uint8_to_buf(allowedIterHashes.length as Uint8_t), Buffer.from(allowedIterHashes.join(''), 'hex')]),
+        data: Buffer.concat([
+            uint8_to_buf(allowedIterHashes.length as Uint8_t), Buffer.from(allowedIterHashes.join(''), 'hex')]),
         expectedResponseLength: 0,  // Expect 0 bytes in response
     })
 
