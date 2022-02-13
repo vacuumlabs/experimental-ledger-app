@@ -27,10 +27,10 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 							   0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41};
 
 const uint8_t ALLOWED_HASHES[][32] = {
-	{0xf7, 0xb7, 0xd1, 0x93, 0x84, 0x08, 0xbd, 0xaa,
-	 0x5a, 0xb8, 0x7a, 0x48, 0xac, 0xfb, 0xc4, 0x28,
-	 0xaf, 0xd1, 0x0a, 0xd0, 0x3e, 0xd5, 0x75, 0x5e,
-	 0x34, 0x0e, 0x33, 0x1b, 0x6e, 0xd8, 0xdf, 0xf1}};
+	{0xc2, 0x31, 0xa4, 0x97, 0xbd, 0xd2, 0x83, 0x9d,
+	 0xc3, 0x2b, 0x99, 0xe7, 0xef, 0x6e, 0x1e, 0xd1,
+	 0x3c, 0xe7, 0x16, 0xe9, 0xee, 0x30, 0x61, 0xd2,
+	 0xc7, 0x7d, 0x0f, 0xcf, 0xaa, 0xaa, 0xf6, 0x36}};
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
 
 enum
@@ -149,6 +149,8 @@ __noinline_due_to_stack__ void signTx_handleEndCountedSectionAPDU(
 	}
 
 	{
+		TRACE("expected: %d, curr: %d",
+			  ctx->expectedSectionLength[ctx->sectionLevel], ctx->currSectionLength[ctx->sectionLevel]);
 		VALIDATE(ctx->sectionLevel > 0, ERR_UNEXPECTED_INS);
 		VALIDATE(
 			ctx->expectedSectionLength[ctx->sectionLevel] == ctx->currSectionLength[ctx->sectionLevel],
@@ -178,7 +180,16 @@ enum
 	HANDLE_SEND_DATA_INVALID
 };
 
-static void signTx_handleSendData_ui_runStep()
+enum
+{
+	NO_STORAGE_INS = 510,
+	SAVE_TO_STORAGE,
+	COMPARE_WITH_STORAGE,
+	COMPARE_AND_SAVE_TO_STORAGE
+};
+
+static void
+signTx_handleSendData_ui_runStep()
 {
 	ui_callback_fn_t *this_fn = signTx_handleSendData_ui_runStep;
 
@@ -223,6 +234,7 @@ static void signTx_handleSendData_ui_runStep()
 // 1 				header_length
 // header_length	header
 // 1				0 (trailing 0)
+// 1				storage_instruction (0 = nothing, 1 = save_to_buffer, 2 = compare with buffer, 3 = 1 + 2)
 // 1 				body_length
 // body_length 		body
 // 1				0 (trailing 0)
@@ -242,6 +254,7 @@ __noinline_due_to_stack__ void signTx_handleSendDataAPDU(
 											wireData1->headerLength[0] + 1;
 	struct
 	{
+		uint8_t storageInstruction[1];
 		uint8_t bodyLength[1];
 		uint8_t body[MAX_BODY_LENGTH];
 	} *wireData2 = ((void *)wireDataBuffer) + expectedWireData1Length;
@@ -276,6 +289,28 @@ __noinline_due_to_stack__ void signTx_handleSendDataAPDU(
 	VALIDATE(
 		ctx->encoding >= ENCODING_STRING && ctx->encoding <= ENCODING_HEX,
 		ERR_INVALID_DATA);
+	VALIDATE(
+		NO_STORAGE_INS <= NO_STORAGE_INS + wireData2->storageInstruction[0] &&
+			NO_STORAGE_INS + wireData2->storageInstruction[0] < COMPARE_AND_SAVE_TO_STORAGE,
+		ERR_INVALID_DATA);
+
+	switch (wireData2->storageInstruction[0])
+	{
+	case NO_STORAGE_INS:
+		break;
+	case SAVE_TO_STORAGE:
+		memcpy(ctx->storageBuffer, ctx->bodyBuf, 64);
+		break;
+	case COMPARE_WITH_STORAGE:
+		VALIDATE(strncmp(ctx->storageBuffer, ctx->bodyBuf, wireData2->bodyLength[0]) == 0,
+				 ERR_INVALID_DATA);
+		break;
+	case COMPARE_AND_SAVE_TO_STORAGE:
+		VALIDATE(strncmp(ctx->storageBuffer, ctx->bodyBuf, wireData2->bodyLength[0]) == 0,
+				 ERR_INVALID_DATA);
+		memcpy(ctx->storageBuffer, ctx->bodyBuf, 64);
+		break;
+	}
 
 	// Set correct body and add to tx
 	// Always add numbers to ctx->uint64Body for displaying it
@@ -593,9 +628,13 @@ static void signTx_handleEnd_ui_runStep()
 
 	UI_STEP(HANDLE_END_STEP_RESPOND)
 	{
+		TRACE("\n\nResponding\n");
 		io_send_buf(SUCCESS, G_io_apdu_buffer, 65 + 32);
+		TRACE("sent SUCCESS");
 		ui_displayBusy(); // needs to happen after I/O
+		TRACE("going to ui_idle()");
 		ui_idle();
+		TRACE("ui_idle() done");
 	}
 
 	UI_STEP_END(HANDLE_END_STEP_HASH_NOT_ALLOWED);
@@ -651,8 +690,9 @@ __noinline_due_to_stack__ void signTx_handleEndAPDU(
 		// // We save the tx hash into APDU buffer to return it
 		memcpy(G_io_apdu_buffer, txHashBuf, SIZEOF(txHashBuf));
 
-		TRACE("Integrity hash:");
+		TRACE("Integrity hash:\n\n");
 		TRACE_BUFFER(integrityHashBuf, SIZEOF(integrityHashBuf));
+		TRACE("\n\n");
 
 		// Check if integrity hash is in the list of allowed hashes
 		ctx->ui_step = HANDLE_END_STEP_HASH_NOT_ALLOWED;

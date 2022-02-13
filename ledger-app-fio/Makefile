@@ -99,7 +99,8 @@ ifeq ($(DEVEL), 1)
 	ifeq ($(TARGET_NAME),TARGET_NANOX)
 		DEFINES += PRINTF=mcu_usb_printf
 	else
-		DEFINES += PRINTF=screen_printf
+		# DEFINES += PRINTF=screen_printf
+        DEFINES += HAVE_SPRINTF HAVE_PRINTF PRINTF=screen_printf
 	endif
 else
 	DEFINES += PRINTF\(...\)=
