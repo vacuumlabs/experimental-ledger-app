@@ -27,10 +27,10 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 							   0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41};
 
 const uint8_t ALLOWED_HASHES[][32] = {
-	{0xc2, 0x31, 0xa4, 0x97, 0xbd, 0xd2, 0x83, 0x9d,
-	 0xc3, 0x2b, 0x99, 0xe7, 0xef, 0x6e, 0x1e, 0xd1,
-	 0x3c, 0xe7, 0x16, 0xe9, 0xee, 0x30, 0x61, 0xd2,
-	 0xc7, 0x7d, 0x0f, 0xcf, 0xaa, 0xaa, 0xf6, 0x36}};
+	{0x82, 0x00, 0x67, 0xb3, 0xfa, 0xaa, 0x45, 0x90,
+	 0x04, 0x7f, 0x04, 0x09, 0x84, 0x5b, 0xab, 0x5c,
+	 0xec, 0x4a, 0x64, 0x14, 0x4b, 0x53, 0x75, 0x8b,
+	 0x23, 0x44, 0xed, 0xa2, 0x86, 0xb0, 0x2f, 0xb4}};
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
 
 enum
@@ -50,6 +50,7 @@ static void signTx_handleInit_ui_runStep()
 	respondSuccessEmptyMsg();
 }
 
+// TODO send chainId using sendData instead of here, as it is FIO specific?
 __noinline_due_to_stack__ void signTx_handleInitAPDU(
 	uint8_t p2,
 	uint8_t *wireDataBuffer,
@@ -76,8 +77,6 @@ __noinline_due_to_stack__ void signTx_handleInitAPDU(
 
 		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
-
-		ctx->network = getNetworkByChainId(wireData->chainId, SIZEOF(wireData->chainId));
 
 		ctx->sectionLevel = 0;
 	}
@@ -149,8 +148,6 @@ __noinline_due_to_stack__ void signTx_handleEndCountedSectionAPDU(
 	}
 
 	{
-		TRACE("expected: %d, curr: %d",
-			  ctx->expectedSectionLength[ctx->sectionLevel], ctx->currSectionLength[ctx->sectionLevel]);
 		VALIDATE(ctx->sectionLevel > 0, ERR_UNEXPECTED_INS);
 		VALIDATE(
 			ctx->expectedSectionLength[ctx->sectionLevel] == ctx->currSectionLength[ctx->sectionLevel],
@@ -347,7 +344,8 @@ __noinline_due_to_stack__ void signTx_handleSendDataAPDU(
 	{
 		// Add to integrity hash
 		uint8_t constants[] = {
-			0x30, 0x07, p2, ctx->encoding, wireData2->bodyLength[0], ctx->sectionLevel};
+			0x30, 0x07, p2, ctx->encoding, wireData2->bodyLength[0],
+			ctx->sectionLevel, wireData1->headerLength[0]};
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
 	}
@@ -463,13 +461,14 @@ __noinline_due_to_stack__ void signTx_handleEndForAPDU(
 
 		uint8_t constants[] = {0x30, 0x0c};
 		uint8_t tmpHashBuf[32];
-		sha_256_finalize(&ctx->integrityHashContext, tmpHashBuf, 32);
-		sha_256_init(&ctx->integrityHashContext);
+		// The new integrity hash is started from endIteration already
+		// sha_256_finalize(&ctx->integrityHashContext, tmpHashBuf, 32);
+		// sha_256_init(&ctx->integrityHashContext);
+		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel - 1], 32);
 		sha_256_append(
 			&ctx->integrityHashContext,
 			ctx->allowedIterationHashesHash[ctx->forLevel], 32);
-		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 
 		explicit_bzero(ctx->allowedIterationHashesHash, 32);
 		explicit_bzero(ctx->intHashes[ctx->forLevel - 1], 32);
@@ -508,8 +507,8 @@ __noinline_due_to_stack__ void signTx_handleStartIterationAPDU(
 
 		// An empty hash is already started from endIteration or startFor
 		uint8_t constants[] = {0x30, 0x0d};
-		sha_256_append(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel], 32);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel], 32);
 	}
 
 	signTx_handleStartIteration_ui_runStep();

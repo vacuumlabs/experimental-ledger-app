@@ -158,7 +158,7 @@ const trnsfiopubkyTemplate = {
               name: "SEND_DATA",
               params: {
                 header: "max_fee",
-                encoding: ENCODING_STRING,
+                encoding: ENCODING_UINT64,
                 display: true,
               },
             },

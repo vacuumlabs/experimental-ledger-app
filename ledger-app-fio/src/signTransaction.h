@@ -19,7 +19,6 @@ typedef struct
 	sha_256_context_t txHashContext;
 	sha_256_context_t integrityHashContext;
 
-	network_type_t network;
 	char actionValidationActor[NAME_STRING_MAX_LENGTH];
 
 	int ui_step;
@@ -68,6 +67,7 @@ typedef struct
 	uint8_t allowedIterationHashesHash[MAX_FOR_DEPTH][32];
 
 	uint8_t storageBuffer[64];
+	// uint8_t storageBuffer[1300];
 
 } ins_sign_transaction_context_t;
 

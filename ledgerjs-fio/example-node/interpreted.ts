@@ -54,10 +54,10 @@ const vals = {
   act_amt: "1",
   "iterations#actions": {
     allowed_iter_hashes: [
-      "10e500c3af313ff7c10721aa8c0407eb464784ac4cf5cee720223b4e9ac62a2a",
+      "e70150a1d5c41b0022a7d95eb84ed0eeaf046dd628631311c5cff8ac6bcb81b0",
     ],
     trnsfiopubky: {
-      "expected_length#1": "128",
+      "expected_length#1": "127",
       contract_account_name: parseContractAccountName(
         "b20901380af44ef59c5918439a1f9a41d83669020319a80574b804a5f95cbd7e",
         "fio.token",
