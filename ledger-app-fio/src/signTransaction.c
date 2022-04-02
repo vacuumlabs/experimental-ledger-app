@@ -27,10 +27,10 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 							   0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41};
 
 const uint8_t ALLOWED_HASHES[][32] = {
-	{0x82, 0x00, 0x67, 0xb3, 0xfa, 0xaa, 0x45, 0x90,
-	 0x04, 0x7f, 0x04, 0x09, 0x84, 0x5b, 0xab, 0x5c,
-	 0xec, 0x4a, 0x64, 0x14, 0x4b, 0x53, 0x75, 0x8b,
-	 0x23, 0x44, 0xed, 0xa2, 0x86, 0xb0, 0x2f, 0xb4}};
+	{0x76, 0x78, 0x94, 0x60, 0x53, 0x94, 0x0b, 0xd6,
+	 0x19, 0x29, 0x5d, 0xdc, 0xd6, 0xd0, 0xde, 0x16,
+	 0x84, 0xcb, 0x0f, 0x46, 0x56, 0x46, 0x5b, 0xf7,
+	 0x42, 0xc8, 0x6c, 0x2c, 0xac, 0x1a, 0x90, 0xbd}};
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
 
 enum
@@ -50,7 +50,7 @@ static void signTx_handleInit_ui_runStep()
 	respondSuccessEmptyMsg();
 }
 
-// TODO send chainId using sendData instead of here, as it is FIO specific?
+// TODO send chainId using sendData instead of here, as it is FIO specific
 __noinline_due_to_stack__ void signTx_handleInitAPDU(
 	uint8_t p2,
 	uint8_t *wireDataBuffer,
@@ -77,6 +77,7 @@ __noinline_due_to_stack__ void signTx_handleInitAPDU(
 
 		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_finalize(&ctx->integrityHashContext, ctx->prevHash, 32);
 
 		ctx->sectionLevel = 0;
 	}
@@ -119,11 +120,14 @@ __noinline_due_to_stack__ void signTx_handleStartCountedSectionAPDU(
 		ctx->currSectionLength[ctx->sectionLevel] = 0;
 
 		uint8_t constants[] = {0x30, 0x09, ctx->sectionLevel};
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->prevHash, 32);
 		sha_256_append(
 			&ctx->integrityHashContext,
 			wireData->sectionLength,
 			SIZEOF(wireData->sectionLength));
+		sha_256_finalize(&ctx->integrityHashContext, ctx->prevHash, 32);
 	}
 
 	signTx_handleStartCountedSection_ui_runStep();
@@ -162,7 +166,10 @@ __noinline_due_to_stack__ void signTx_handleEndCountedSectionAPDU(
 		ctx->sectionLevel--;
 
 		uint8_t constants[] = {0x30, 0x0a};
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->prevHash, 32);
+		sha_256_finalize(&ctx->integrityHashContext, ctx->prevHash, 32);
 	}
 
 	signTx_handleEndCountedSection_ui_runStep();
@@ -346,8 +353,11 @@ __noinline_due_to_stack__ void signTx_handleSendDataAPDU(
 		uint8_t constants[] = {
 			0x30, 0x07, p2, ctx->encoding, wireData2->bodyLength[0],
 			ctx->sectionLevel, wireData1->headerLength[0]};
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->prevHash, 32);
 		sha_256_append(&ctx->integrityHashContext, ctx->headerBuf, wireData1->headerLength[0]);
+		sha_256_finalize(&ctx->integrityHashContext, ctx->prevHash, 32);
 	}
 
 	security_policy_t policy = policyForSendData(p2);
@@ -405,13 +415,14 @@ __noinline_due_to_stack__ void signTx_handleStartForAPDU(
 			ERR_INVALID_DATA);
 
 		uint8_t constants[] = {0x30, 0x0b};
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->prevHash, 32);
 		// Put possible iterations range into the integrity hash
 		sha_256_append(&ctx->integrityHashContext, wireData->minNumIterations, 1);
 		sha_256_append(&ctx->integrityHashContext, wireData->maxNumIterations, 1);
 
 		sha_256_finalize(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel], 32);
-		sha_256_init(&ctx->integrityHashContext);
 
 		ctx->forLevel++;
 
@@ -460,15 +471,14 @@ __noinline_due_to_stack__ void signTx_handleEndForAPDU(
 			ERR_CANT_END_FOR);
 
 		uint8_t constants[] = {0x30, 0x0c};
-		uint8_t tmpHashBuf[32];
-		// The new integrity hash is started from endIteration already
-		// sha_256_finalize(&ctx->integrityHashContext, tmpHashBuf, 32);
-		// sha_256_init(&ctx->integrityHashContext);
+
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel - 1], 32);
 		sha_256_append(
 			&ctx->integrityHashContext,
 			ctx->allowedIterationHashesHash[ctx->forLevel], 32);
+		sha_256_finalize(&ctx->integrityHashContext, ctx->prevHash, 32);
 
 		explicit_bzero(ctx->allowedIterationHashesHash, 32);
 		explicit_bzero(ctx->intHashes[ctx->forLevel - 1], 32);
@@ -505,10 +515,11 @@ __noinline_due_to_stack__ void signTx_handleStartIterationAPDU(
 
 		ctx->forIterationsCnt[ctx->forLevel]++;
 
-		// An empty hash is already started from endIteration or startFor
 		uint8_t constants[] = {0x30, 0x0d};
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
 		sha_256_append(&ctx->integrityHashContext, ctx->intHashes[ctx->forLevel], 32);
+		sha_256_finalize(&ctx->integrityHashContext, ctx->prevHash, 32);
 	}
 
 	signTx_handleStartIteration_ui_runStep();
@@ -544,7 +555,9 @@ __noinline_due_to_stack__ void signTx_handleEndIterationAPDU(
 		wireData->allowedIterationHashes[wireData->numAllowedHashes[0] * 32] = 0; // zero terminate them
 
 		uint8_t constants[] = {0x30, 0x0e};
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->prevHash, 32);
 
 		// Finalize iteration integrity hash
 		uint8_t tmpHashBuf[32];
@@ -594,8 +607,6 @@ __noinline_due_to_stack__ void signTx_handleEndIterationAPDU(
 		VALIDATE(allowedHashesListValid, ERR_INVALID_DATA);
 
 		// Number of remaining iterations is decreased in startFor, not here
-
-		sha_256_init(&ctx->integrityHashContext);
 	}
 
 	signTx_handleEndIteration_ui_runStep();
@@ -662,8 +673,9 @@ __noinline_due_to_stack__ void signTx_handleEndAPDU(
 
 	{
 		uint8_t constants[] = {0x30, 0x06, wireDataSize};
-
+		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
+		sha_256_append(&ctx->integrityHashContext, ctx->prevHash, 32);
 
 		// Extension points
 		uint8_t epBuf[1];

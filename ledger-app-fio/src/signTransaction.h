@@ -19,6 +19,8 @@ typedef struct
 	sha_256_context_t txHashContext;
 	sha_256_context_t integrityHashContext;
 
+	uint8_t prevHash[32]; // Finalized hash from the previous instruction
+
 	int ui_step;
 
 	char *headerBuf;
@@ -43,6 +45,9 @@ typedef struct
 
 	uint8_t storageBuffer[64];
 	// uint8_t storageBuffer[1300];
+
+	bip44_path_t wittnessPath;
+	public_key_t wittnessPathPubkey;
 
 } ins_sign_transaction_context_t;
 
