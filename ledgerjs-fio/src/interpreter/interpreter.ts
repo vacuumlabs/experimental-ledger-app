@@ -17,7 +17,6 @@ export default class Interpreter {
       let res;
       console.log(ins.name);
       if (ins.name == "INIT_HASH") {
-        // TODO add hash_fn and sig_algo support
         res = await this.appInstance.initHash(values.chain_id);
       } else if (ins.name == "SEND_DATA") {
         const value =
@@ -81,9 +80,8 @@ export default class Interpreter {
       console.log("Instruction response: ", res);
     }
     if (level == 0) {
-      console.log("going to end hash:");
       const endRes = await this.appInstance.endHash(this.path);
-      console.log("endHash response: ", endRes);
+      return endRes;
     }
   }
 }
