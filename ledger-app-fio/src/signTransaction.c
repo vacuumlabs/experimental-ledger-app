@@ -27,10 +27,10 @@ uint8_t const SECP256K1_N[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 							   0xbf, 0xd2, 0x5e, 0x8c, 0xd0, 0x36, 0x41, 0x41};
 
 const uint8_t ALLOWED_HASHES[][32] = {
-	{0x76, 0x78, 0x94, 0x60, 0x53, 0x94, 0x0b, 0xd6,
-	 0x19, 0x29, 0x5d, 0xdc, 0xd6, 0xd0, 0xde, 0x16,
-	 0x84, 0xcb, 0x0f, 0x46, 0x56, 0x46, 0x5b, 0xf7,
-	 0x42, 0xc8, 0x6c, 0x2c, 0xac, 0x1a, 0x90, 0xbd}};
+	{0x6e, 0x9c, 0x9e, 0x97, 0x94, 0x77, 0xe2, 0xca,
+	 0x60, 0x12, 0xda, 0x0d, 0x8d, 0x3e, 0x2d, 0xdc,
+	 0x32, 0x7d, 0xa8, 0xf4, 0xc3, 0x7d, 0x61, 0xaf,
+	 0x6a, 0x46, 0x4c, 0x4f, 0xea, 0x21, 0x5f, 0xa9}};
 const uint8_t NUM_ALLOWED_HASHES = SIZEOF(ALLOWED_HASHES) / SIZEOF(ALLOWED_HASHES[0]);
 
 enum
@@ -63,17 +63,9 @@ __noinline_due_to_stack__ void signTx_handleInitAPDU(
 	}
 
 	{
-		struct
-		{
-			uint8_t chainId[32];
-		} *wireData = (void *)wireDataBuffer;
-
-		VALIDATE(SIZEOF(*wireData) == wireDataSize, ERR_INVALID_DATA);
-
 		sha_256_init(&ctx->txHashContext);
-		sha_256_append(&ctx->txHashContext, wireData->chainId, SIZEOF(wireData->chainId));
 
-		uint8_t constants[] = {0x30, 0x01, SIZEOF(wireData->chainId)};
+		uint8_t constants[] = {0x30, 0x01};
 
 		sha_256_init(&ctx->integrityHashContext);
 		sha_256_append(&ctx->integrityHashContext, constants, SIZEOF(constants));
@@ -215,7 +207,7 @@ signTx_handleSendData_ui_runStep()
 				ctx->headerBuf,
 				ctx->bodyBuf,
 				sizeof(ctx->bodyBuf),
-				this_fn); // TODO test this
+				this_fn);
 		}
 		else
 		{
@@ -341,6 +333,8 @@ __noinline_due_to_stack__ void signTx_handleSendDataAPDU(
 		break;
 	case ENCODING_HEX:
 	case ENCODING_STRING:
+		PRINTF("SIZEOF BODY: %d", wireData2->bodyLength[0]);
+		TRACE_BUFFER(wireData2->body, SIZEOF(wireData2->body));
 		sha_256_append(&ctx->txHashContext, ctx->bodyBuf, wireData2->bodyLength[0]);
 		break;
 	default:

@@ -12,10 +12,13 @@ const trnsfiopubkyTemplate = {
   instructions: [
     {
       name: "INIT_HASH",
+      params: {},
+    },
+    {
+      name: "SEND_DATA",
       params: {
-        //   chain_id: "PLACEHOLDER_CHAIN_ID",
-        hash_fn: "SHA-256",
-        sig_algo: "SECPK",
+        header: "chain_id",
+        encoding: ENCODING_HEX,
       },
     },
     {

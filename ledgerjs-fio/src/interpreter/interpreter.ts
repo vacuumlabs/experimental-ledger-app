@@ -17,7 +17,7 @@ export default class Interpreter {
       let res;
       console.log(ins.name);
       if (ins.name == "INIT_HASH") {
-        res = await this.appInstance.initHash(values.chain_id);
+        res = await this.appInstance.initHash();
       } else if (ins.name == "SEND_DATA") {
         const value =
           ins.params.value == undefined

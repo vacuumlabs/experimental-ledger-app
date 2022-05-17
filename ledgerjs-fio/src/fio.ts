@@ -236,12 +236,12 @@ export class Fio {
     return yield* getSerial(version);
   }
 
-  async initHash(chainId: HexString): Promise<InitHashResponse> {
-    return interact(this._initHash(chainId), this._send);
+  async initHash(): Promise<InitHashResponse> {
+    return interact(this._initHash(), this._send);
   }
 
-  *_initHash(chainId: HexString): Interaction<InitHashResponse> {
-    return yield* initHash(chainId);
+  *_initHash(): Interaction<InitHashResponse> {
+    return yield* initHash();
   }
 
   async endHash(path: BIP32Path): Promise<EndHashResponse> {
