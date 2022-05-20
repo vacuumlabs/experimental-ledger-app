@@ -1,4 +1,7 @@
+import { resolve } from "path";
+import { buf_to_hex } from "utils/serialize";
 import { Fio } from "../fio";
+import { ENCODING_STRING, ENCODING_HEX } from "utils/parse";
 
 export default class Interpreter {
   appInstance: Fio;
@@ -11,11 +14,8 @@ export default class Interpreter {
 
   async interpret(template: any, values: any, level: number = 0) {
     for (let i = 0; i < template.instructions.length; i++) {
-      console.log("iteration");
       const ins = template.instructions[i];
-      console.log("ins: ", ins);
       let res;
-      console.log(ins.name);
       if (ins.name == "INIT_HASH") {
         res = await this.appInstance.initHash();
       } else if (ins.name == "SEND_DATA") {
@@ -40,15 +40,8 @@ export default class Interpreter {
           ins.params.max_iterations,
           values[key].allowed_iter_hashes
         );
-        console.log(res);
-        console.log(
-          "GOING TO DO THIS MANY ITERATIONS: ",
-          ins.iterations.length
-        );
         for (let j = 0; j < ins.iterations.length; j++) {
-          console.log("STARTING ITERATION ", j);
           res = await this.appInstance.startIteration();
-          console.log(res);
           const it = ins.iterations[j];
           const name = it.name;
           await this.interpret(
@@ -56,11 +49,9 @@ export default class Interpreter {
             values[key][name],
             level + 1
           );
-          console.log("NOW:");
           res = await this.appInstance.endIteration(
             values[key].allowed_iter_hashes
           );
-          console.log(res);
         }
         await this.appInstance.endFor();
       } else if (ins.name == "START_COUNTED_SECTION") {
@@ -74,14 +65,12 @@ export default class Interpreter {
         );
       } else if (ins.name == "END_COUNTED_SECTION") {
         res = await this.appInstance.endCountedSection();
+      } else if (ins.name == "END_HASH") {
+        res = await this.appInstance.endHash(this.path);
+        return res;
       } else {
         throw new Error("Unknown instruction name in the template");
       }
-      console.log("Instruction response: ", res);
-    }
-    if (level == 0) {
-      const endRes = await this.appInstance.endHash(this.path);
-      return endRes;
     }
   }
 }

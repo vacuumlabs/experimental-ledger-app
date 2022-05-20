@@ -86,7 +86,6 @@ const trnsfiopubkyTemplate = {
       params: {
         min_iterations: 1,
         max_iterations: 10,
-        //   allowed_iter_hashes: "PLACEHOLDER_ALLOWED_ITER_HASHES",
       },
       iterations: [
         {
@@ -95,9 +94,7 @@ const trnsfiopubkyTemplate = {
             {
               name: "START_COUNTED_SECTION",
               id: "1",
-              params: {
-                // expected_length: "PLACEHOLDER_EXPECTED_LENGTH",
-              },
+              params: {},
             },
             {
               name: "SEND_DATA",
@@ -192,6 +189,10 @@ const trnsfiopubkyTemplate = {
           ],
         },
       ],
+    },
+    {
+      name: "END_HASH",
+      params: {},
     },
   ],
 };
