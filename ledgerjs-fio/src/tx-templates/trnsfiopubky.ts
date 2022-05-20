@@ -19,6 +19,7 @@ const trnsfiopubkyTemplate = {
       params: {
         header: "chain_id",
         encoding: ENCODING_HEX,
+        body_len: 32,
       },
     },
     {
