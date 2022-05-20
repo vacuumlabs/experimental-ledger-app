@@ -10,11 +10,12 @@ The app can be compiled using a Docker container with all dependencies. A detail
 container up can be found in ledger-app-builder [repository](https://github.com/LedgerHQ/ledger-app-builder).
 
 ### Loading the app
-
-`docker run --rm -ti -v "$(realpath .):/app" --privileged ledger-app-builder:latest`
-`cd experimental-ledger-app/ledger-app-fio`
-`make clean`
-`make load`
+```
+docker run --rm -ti -v "$(realpath .):/app" --privileged ledger-app-builder:latest
+cd experimental-ledger-app/ledger-app-fio
+make clean
+make load
+```
 
 Builds and loads the application into the connected device. Just make sure to close the Ledger app on the device before running the command.
 
