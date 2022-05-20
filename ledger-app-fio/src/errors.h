@@ -1,44 +1,44 @@
 #ifndef H_FIO_APP_ERRORS
 #define H_FIO_APP_ERRORS
 
-enum {
+enum
+{
 	// Successfull responses
-	SUCCESS                 = 0x9000,
+	SUCCESS = 0x9000,
 
 	// Start of error which trigger automatic response
 	// Note that any such error will reset
 	// multi-APDU exchange
-	_ERR_AUTORESPOND_START         = 0x6E00,
+	_ERR_AUTORESPOND_START = 0x6E00,
 
 	// Bad request header
-	ERR_MALFORMED_REQUEST_HEADER   = 0x6E01,
+	ERR_MALFORMED_REQUEST_HEADER = 0x6E01,
 	// Unknown CLA
-	ERR_BAD_CLA                    = 0x6E02,
+	ERR_BAD_CLA = 0x6E02,
 	// Unknown INS
-	ERR_UNKNOWN_INS                = 0x6E03,
+	ERR_UNKNOWN_INS = 0x6E03,
 	// TODO(should we move this to ERR_INVALID_STATE) ?
-	ERR_STILL_IN_CALL              = 0x6E04,
+	ERR_STILL_IN_CALL = 0x6E04,
 	// P1 or P2 is invalid
 	ERR_INVALID_REQUEST_PARAMETERS = 0x6E05,
 	// Request is not valid in the context of previous calls
-	ERR_INVALID_STATE              = 0x6E06,
+	ERR_INVALID_STATE = 0x6E06,
 	// Some part of request data is invalid (includes not enough data)
-	ERR_INVALID_DATA               = 0x6E07,
+	ERR_INVALID_DATA = 0x6E07,
 
 	// User rejected the action
-	ERR_REJECTED_BY_USER           = 0x6E09,
+	ERR_REJECTED_BY_USER = 0x6E09,
 	// Ledger security policy rejected the action
-	ERR_REJECTED_BY_POLICY         = 0x6E10,
+	ERR_REJECTED_BY_POLICY = 0x6E10,
 
 	// Pin screen
-	ERR_DEVICE_LOCKED              = 0x6E11,
+	ERR_DEVICE_LOCKED = 0x6E11,
 
 	// unsupported Shelley address type
-	ERR_UNSUPPORTED_ADDRESS_TYPE   = 0x6E12,
-
+	ERR_UNSUPPORTED_ADDRESS_TYPE = 0x6E12,
 
 	// end of errors which trigger automatic response
-	_ERR_AUTORESPOND_END           = 0x6E13,
+	_ERR_AUTORESPOND_END = 0x6E13,
 
 	// Errors below SHOULD NOT be returned to the client
 	// Instead, leaking these to the main() scope
@@ -46,28 +46,27 @@ enum {
 	// and we should stop further processing
 	// to avoid exploits
 
-
 	// Internal errors
-	ERR_ASSERT                = 0x4700,
-	ERR_NOT_IMPLEMENTED       = 0x4701,
+	ERR_ASSERT = 0x4700,
+	ERR_NOT_IMPLEMENTED = 0x4701,
 
 	// stream
-	ERR_NOT_ENOUGH_INPUT      = 0x4710,
-	ERR_DATA_TOO_LARGE        = 0x4711,
+	ERR_NOT_ENOUGH_INPUT = 0x4710,
+	ERR_DATA_TOO_LARGE = 0x4711,
 
 	// cbor
-	ERR_UNEXPECTED_TOKEN      = 0x4720,
+	ERR_UNEXPECTED_TOKEN = 0x4720,
 
 	// Invalid integrity hash
-	ERR_HASH_NOT_ALLOWED	  = 0x4800,
+	ERR_HASH_NOT_ALLOWED = 0x4800,
 
 	// For FOR blocks
 	ERR_TOO_MANY_NESTED_FOR_BLOCKS = 0x4900,
-	ERR_CANT_END_FOR 			   = 0x4901,
-	ERR_NOT_IN_FOR				   = 0x4902,
+	ERR_CANT_END_FOR = 0x4901,
+	ERR_NOT_IN_FOR = 0x4902,
 
-	ERR_UNEXPECTED_INS			   = 0x5000,
-	ERR_INVALID_ITERATION          = 0x5100
+	ERR_UNEXPECTED_INS = 0x5000,
+	ERR_INVALID_ITERATION = 0x5100
 };
 
 #endif // H_FIO_APP_ERRORS

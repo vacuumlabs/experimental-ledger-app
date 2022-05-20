@@ -50,7 +50,6 @@ static void signTx_handleInit_ui_runStep()
 	respondSuccessEmptyMsg();
 }
 
-// TODO send chainId using sendData instead of here, as it is FIO specific
 __noinline_due_to_stack__ void signTx_handleInitAPDU(
 	uint8_t p2,
 	uint8_t *wireDataBuffer,
