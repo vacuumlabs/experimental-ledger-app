@@ -54,7 +54,7 @@ const vals = {
   act_amt: "1",
   "iterations#actions": {
     allowed_iter_hashes: [
-      "e12d8d890913a219f6f182bd08bc54a41d5cc93b9ad23a0b782e77359a726358",
+      "b59afff68ef56bd5abb3f74d6047559aebcc1a1189803c57eb988b76a92f90e5",
     ],
     trnsfiopubky: {
       "expected_length#1": "127",

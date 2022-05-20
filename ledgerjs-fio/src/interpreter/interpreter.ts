@@ -78,6 +78,7 @@ export default class Interpreter {
   async interpret(template: any, values: any, level: number = 0) {
     for (let i = 0; i < template.instructions.length; i++) {
       const ins = template.instructions[i];
+      console.log(ins);
       let res;
       if (ins.name == "INIT_HASH") {
         res = await this.appInstance.initHash();
